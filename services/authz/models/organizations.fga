@@ -1,0 +1,14 @@
+module organizations
+
+# Organization-level membership (users may belong to many orgs).
+# Box ref: org membership powers “People in your company” shared links.
+type organization
+  relations
+    define owner: [user]                           # full control of org settings
+    define admin: [user, group#member]             # manage org (non-owner)
+    define member: [user, group#member]            # company-wide visibility for shared links
+
+    define exempt_external_restrictions: [user]    # Box ref: collaborators whitelist exemptions (checked in app when inviting externals)
+
+    define can_view: owner or admin or member
+    define can_manage: owner or admin

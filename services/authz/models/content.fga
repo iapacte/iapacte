@@ -1,0 +1,54 @@
+module content
+
+# Generic content tree: folders contain folders, files, and (via Option B) workflows.
+# Box ref: per-resource roles + shared links; Make ref: scenarios organized in folders.
+
+type folder
+  relations
+    define org: [organization]                     # tie folder to its org for company-wide links
+    define parent: [folder]
+
+    # Box-like collaborators
+    define owner: [user]
+    define co_owner: [user, group#member]
+    define editor: [user, group#member]
+    define uploader: [user, group#member]
+    define viewer: [user, group#member, user:*] or member from org   # Box: public link (user:*) / company link (org.member)
+    define previewer: [user, group#member]
+
+    define collaborator: owner or co_owner or editor or uploader or viewer or previewer
+
+    # Capabilities (inherit down the tree)
+    define can_list_children: collaborator or can_list_children from parent
+    define can_create_subfolder: owner or co_owner or editor or can_create_subfolder from parent
+    define can_upload: owner or co_owner or editor or uploader or can_upload from parent
+    define can_preview: owner or co_owner or editor or viewer or previewer or can_preview from parent
+    define can_read: owner or co_owner or editor or viewer or can_read from parent
+    define can_write: owner or co_owner or editor or can_write from parent
+    define can_share: owner or co_owner or editor or can_share from parent
+    define can_delete: owner or co_owner
+
+    # Option B — workflows under generic folders (Make-like layout)
+    define can_create_workflow: owner or co_owner or editor or can_create_workflow from parent
+    define can_run: owner or co_owner or editor or can_run from parent   # lets folders grant run permission to contained workflows
+
+type file
+  relations
+    define org: [organization]
+    define parent: [folder]
+
+    # Box-like collaborators (direct)
+    define owner: [user]
+    define co_owner: [user, group#member]
+    define editor: [user, group#member]
+    define viewer: [user, group#member, user:*] or member from org      # Box: public/company link behaviors
+    define previewer: [user, group#member]
+
+    define collaborator: owner or co_owner or editor or viewer or previewer
+
+    # Capabilities (inherit from containing folder)
+    define can_preview: owner or co_owner or editor or viewer or previewer or can_preview from parent
+    define can_read: owner or co_owner or editor or viewer or can_read from parent
+    define can_write: owner or co_owner or editor
+    define can_share: owner or co_owner or editor or can_share from parent
+    define can_delete: owner or co_owner

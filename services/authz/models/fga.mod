@@ -7,6 +7,14 @@
 # OpenGFA ReBAC Check: Does user {user} have relation {relation} with object {object}?
 ########################################################
 
+# Modular model manifest. Load order doesn’t matter; relations are fully qualified.
+# Box ref: per-resource collaborations (file/folder/workflow).
+# Make ref: workflows (scenarios) live inside folders; team-like inheritance can be modeled via parents.
+
 schema: '1.2'
 contents:
-  - workspace.fga
+  - core.fga
+  - organizations.fga
+  - groups.fga
+  - content.fga
+  - workflows.fga

@@ -1,0 +1,12 @@
+module groups
+
+# Org-scoped groups/teams (nestable). Assign collaborators to groups for coarse grants.
+type group
+  relations
+    define in_org: [organization]                  # optional link for audits / policy checks
+
+    define direct_member: [user]
+    define subgroup: [group]
+
+    define member: direct_member or member from subgroup
+    define admin: [user] or admin from subgroup

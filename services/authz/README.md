@@ -54,7 +54,7 @@ Our authorization models are organized using OpenFGA's modular model system. Thi
 ### Structure
 
 - `services/authz/models/fga.mod`: The main manifest file that defines which modules are included
-- `services/authz/models/library.fga`: The library bounded context authorization module
+- `services/authz/models/xyz.fga`: The xyz bounded context authorization module
 
 ### Working with Models
 
@@ -80,7 +80,7 @@ To verify your OpenFGA model definitions, run the following command:
 
 ```sh
 # In the root of the project
-fga model test --tests ./services/authz/models/workspace.fga.yaml
+fga model test --tests ./services/authz/models/organizations.fga.yaml
 ```
 
 ## Model Transformations
@@ -91,7 +91,7 @@ For example, to transform your `library.fga` file into a JSON file, run:
 
 ```sh
 # In the root of the project
-fga model transform --input ./services/authz/models/library.fga --output ./services/authz/models/library.json
+fga model transform --input ./services/authz/models/organizations.fga --output ./services/authz/models/organizations.json
 ```
 
 This command generates a JSON representation of your model.

@@ -1,4 +1,4 @@
-name: aipacto_authz
+name: iapacte_authz
 
 services:
   postgres:
@@ -13,12 +13,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - aipacto_network
+      - iapacte_network
 
   migrate:
     depends_on:
@@ -31,7 +31,7 @@ services:
       - OPENFGA_DATASTORE_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
       - OPENFGA_VERBOSE=true
     networks:
-      - aipacto_network
+      - iapacte_network
 
   openfga:
     depends_on:
@@ -63,7 +63,7 @@ services:
       # Playground (disable in prod)
       - ${OPENFGA_PLAYGROUND_PORT}:${OPENFGA_PLAYGROUND_PORT}
     networks:
-      - aipacto_network
+      - iapacte_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 5s
@@ -76,5 +76,5 @@ volumes:
     name: authz_postgres_data
 
 networks:
-  aipacto_network:
+  iapacte_network:
     external: true

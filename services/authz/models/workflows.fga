@@ -1,0 +1,63 @@
+module workflows
+
+# Workflows (a.k.a. scenarios) live under generic folders.
+# Keep Box-style per-resource roles; Make-style operations (run/stop/schedule) map to run/schedule capabilities.
+
+type workflow
+  relations
+    # Scoping
+    define org: [organization]                     # needed for company-wide visibility
+    define parent: [folder]                        # lives in the content tree
+
+    # Box-like base roles
+    define owner: [user]
+    define co_owner: [user, group#member]
+    define editor: [user, group#member]            # edit blueprint/interface
+    define viewer: [user, group#member, user:*] or member from org or viewer from parent
+                                                   # derive visibility from parent folder viewers (inherit) + org/company
+
+    # Optional, narrow-duty roles (separation of duties without full edit)
+    define executor: [user, group#member]          # Make: start/stop/manual run without edit
+    define scheduler: [user, group#member]         # manage schedules (cron/timers)
+    define auditor: [user, group#member]           # read logs/usage/audit trails
+    define integrator: [user, group#member]        # connections/secrets/triggers
+    define variables_manager: [user, group#member] # build/runtime variables
+    define version_manager: [user, group#member]   # versions/export/import
+    define alert_manager: [user, group#member]     # alerts/monitors/on-call
+    define publisher: [user, group#member]         # publish as template/catalog item
+
+    # Core capabilities
+    define can_view: owner or co_owner or editor or viewer             # no "from parent" needed; viewer already inherits
+    define can_edit: owner or co_owner or editor
+    define can_run: owner or co_owner or executor or can_run from parent   # Make: operators can run; folders can grant run
+    define can_share: owner or co_owner or editor or can_share from parent
+    define can_delete: owner or co_owner
+
+    # Lifecycle & structure
+    define can_clone: owner or co_owner or editor
+    define can_move: owner or co_owner or editor
+    define can_archive: owner or co_owner
+    define can_lock: owner or co_owner
+
+    # Operation & scheduling
+    define can_manage_schedule: owner or co_owner or editor or scheduler
+
+    # Observability
+    define can_view_logs: owner or co_owner or editor or auditor or executor
+    define can_view_usage: owner or co_owner or editor or auditor
+    define can_view_audit: owner or co_owner or auditor
+
+    # Runtime configuration
+    define can_manage_variables: owner or co_owner or editor or variables_manager
+    define can_manage_triggers: owner or co_owner or editor or integrator or scheduler
+    define can_manage_connections: owner or co_owner or integrator
+    define can_manage_secrets: owner or co_owner or integrator
+
+    # Interface & versions
+    define can_edit_interface: owner or co_owner or editor
+    define can_manage_versions: owner or co_owner or editor or version_manager
+    define can_export_import: owner or co_owner or editor or version_manager
+
+    # Distribution & alerts
+    define can_publish_template: owner or co_owner or publisher
+    define can_manage_alerts: owner or co_owner or alert_manager
