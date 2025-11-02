@@ -15,137 +15,199 @@ export class ErrorDbExecutionFailed extends Data.TaggedError(
 	message: string
 }> {}
 
+type KyselyDatabase = {
+	organizations: {
+		id: string
+		name: string
+		region: string | null
+		metadata: string | null
+		owner_id: string
+		created_at: string
+		updated_at: string
+	}
+	organization_users: {
+		id: string
+		organization_id: string
+		user_id: string | null
+		email: string
+		role: string
+		status: string
+		invited_at: string | null
+		joined_at: string | null
+		display_name: string | null
+	}
+	collaborations: {
+		id: string
+		organization_id: string
+		resource_type: string
+		resource_id: string
+		accessible_by_type: string
+		accessible_by_reference: string
+		role: string
+		created_at: string
+		created_by: string
+	}
+	exemptions: {
+		id: string
+		organization_id: string
+		subject: string
+		reason: string | null
+		created_at: string
+		created_by: string
+	}
+}
+
+const createSchema = async (kysely: Kysely<KyselyDatabase>) => {
+	await kysely.schema
+		.createTable('organizations')
+		.ifNotExists()
+		.addColumn('id', 'text', col => col.primaryKey().notNull())
+		.addColumn('name', 'text', col => col.notNull())
+		.addColumn('region', 'text')
+		.addColumn('metadata', 'text')
+		.addColumn('owner_id', 'text', col => col.notNull())
+		.addColumn('created_at', 'text', col => col.notNull())
+		.addColumn('updated_at', 'text', col => col.notNull())
+		.execute()
+
+	await kysely.schema
+		.createTable('organization_users')
+		.ifNotExists()
+		.addColumn('id', 'text', col => col.primaryKey().notNull())
+		.addColumn('organization_id', 'text', col => col.notNull())
+		.addColumn('user_id', 'text')
+		.addColumn('email', 'text', col => col.notNull())
+		.addColumn('role', 'text', col => col.notNull())
+		.addColumn('status', 'text', col => col.notNull())
+		.addColumn('invited_at', 'text')
+		.addColumn('joined_at', 'text')
+		.addColumn('display_name', 'text')
+		.addForeignKeyConstraint(
+			'organization_users_org_fk',
+			['organization_id'],
+			'organizations',
+			['id'],
+			cb => cb.onDelete('cascade'),
+		)
+		.execute()
+
+	await kysely.schema
+		.createIndex('organization_users_org_idx')
+		.ifNotExists()
+		.on('organization_users')
+		.column('organization_id')
+		.execute()
+
+	await kysely.schema
+		.createIndex('organization_users_user_idx')
+		.ifNotExists()
+		.on('organization_users')
+		.column('user_id')
+		.execute()
+
+	await kysely.schema
+		.createTable('collaborations')
+		.ifNotExists()
+		.addColumn('id', 'text', col => col.primaryKey().notNull())
+		.addColumn('organization_id', 'text', col => col.notNull())
+		.addColumn('resource_type', 'text', col => col.notNull())
+		.addColumn('resource_id', 'text', col => col.notNull())
+		.addColumn('accessible_by_type', 'text', col => col.notNull())
+		.addColumn('accessible_by_reference', 'text', col => col.notNull())
+		.addColumn('role', 'text', col => col.notNull())
+		.addColumn('created_at', 'text', col => col.notNull())
+		.addColumn('created_by', 'text', col => col.notNull())
+		.addForeignKeyConstraint(
+			'collaborations_org_fk',
+			['organization_id'],
+			'organizations',
+			['id'],
+			cb => cb.onDelete('cascade'),
+		)
+		.execute()
+
+	await kysely.schema
+		.createIndex('collaborations_org_idx')
+		.ifNotExists()
+		.on('collaborations')
+		.column('organization_id')
+		.execute()
+
+	await kysely.schema
+		.createIndex('collaborations_resource_idx')
+		.ifNotExists()
+		.on('collaborations')
+		.column('resource_type')
+		.column('resource_id')
+		.execute()
+
+	await kysely.schema
+		.createTable('exemptions')
+		.ifNotExists()
+		.addColumn('id', 'text', col => col.primaryKey().notNull())
+		.addColumn('organization_id', 'text', col => col.notNull())
+		.addColumn('subject', 'text', col => col.notNull())
+		.addColumn('reason', 'text')
+		.addColumn('created_at', 'text', col => col.notNull())
+		.addColumn('created_by', 'text', col => col.notNull())
+		.addForeignKeyConstraint(
+			'exemptions_org_fk',
+			['organization_id'],
+			'organizations',
+			['id'],
+			cb => cb.onDelete('cascade'),
+		)
+		.execute()
+
+	await kysely.schema
+		.createIndex('exemptions_org_idx')
+		.ifNotExists()
+		.on('exemptions')
+		.column('organization_id')
+		.execute()
+}
+
 export class Database extends Effect.Service<Database>()('Database', {
 	accessors: true,
 	scoped: Effect.gen(function* () {
 		const url = yield* Config.string('DATABASE_URL')
-
-		Effect.log('Starting database connection')
-
-		let client: Client
-		// Use auth token only for remote libsql (Turso); local file: URLs never need it.
 		const isRemoteLibsql = url.startsWith('libsql://')
-		if (isRemoteLibsql) {
-			const authToken = yield* Config.redacted('DATABASE_TOKEN').pipe(
-				Effect.orElseSucceed(() => Redacted.make('')),
-			)
+		const token = isRemoteLibsql
+			? yield* Config.redacted('DATABASE_TOKEN').pipe(
+					Effect.orElseSucceed(() => Redacted.make('')),
+				)
+			: Redacted.make('')
+		const authToken = Redacted.value(token)
+		const clientConfig = {
+			url,
+			...(isRemoteLibsql && authToken ? { authToken } : {}),
+		} as const
 
-			client = createClient({
-				url,
-				// Some libsql servers can accept empty token (local/dev); pass only if present
-				...(Redacted.value(authToken)
-					? { authToken: Redacted.value(authToken) }
-					: {}),
-			})
-		} else {
-			client = createClient({
-				url,
-			})
-		}
+		yield* Effect.log(`Starting database connection (${url})`)
 
-		// Initialize Kysely with LibSQL dialect
-		type KyselyDatabase = {
-			documents: {
-				id: string
-				snapshot: Uint8Array
-			}
-			document_history: {
-				doc_id: string
-				version_id: string
-				version: string // JSON serialized VersionVector
-				timestamp: number
-				author: string
-				message: string | null
-			}
-			diagrams: {
-				id: string
-				snapshot: Uint8Array
-			}
-			diagram_history: {
-				diag_id: string
-				version_id: string
-				version: string
-				timestamp: number
-				author: string
-				message: string | null
-			}
-		}
-
-		const dialect = new LibSQLDialect({
-			client: createClient({
-				url,
-				...(isRemoteLibsql
-					? {
-							authToken: Redacted.value(
-								yield* Config.redacted('DATABASE_TOKEN').pipe(
-									Effect.orElseSucceed(() => Redacted.make('')),
-								),
-							),
-						}
-					: {}),
-			}),
-		})
+		const client: Client = createClient(clientConfig)
+		const dialect = new LibSQLDialect({ client })
 		const kysely = new Kysely<KyselyDatabase>({ dialect })
 
-		// Create tables if they don't exist via Kysely schema builder
-		yield* Effect.tryPromise(async () => {
-			await kysely.schema
-				.createTable('documents')
-				.ifNotExists()
-				.addColumn('id', 'text', col => col.primaryKey().notNull())
-				.addColumn('snapshot', 'blob', col => col.notNull())
-				.execute()
+		yield* Effect.tryPromise(() => createSchema(kysely))
 
-			await kysely.schema
-				.createTable('document_history')
-				.ifNotExists()
-				.addColumn('doc_id', 'text', col => col.notNull())
-				.addColumn('version_id', 'text', col => col.notNull())
-				.addColumn('version', 'text', col => col.notNull())
-				.addColumn('timestamp', 'integer', col => col.notNull())
-				.addColumn('author', 'text', col => col.notNull())
-				.addColumn('message', 'text')
-				.addPrimaryKeyConstraint('document_history_pk', [
-					'doc_id',
-					'version_id',
-				])
-				.execute()
-
-			await kysely.schema
-				.createTable('diagrams')
-				.ifNotExists()
-				.addColumn('id', 'text', col => col.primaryKey().notNull())
-				.addColumn('snapshot', 'blob', col => col.notNull())
-				.execute()
-
-			await kysely.schema
-				.createTable('diagram_history')
-				.ifNotExists()
-				.addColumn('diag_id', 'text', col => col.notNull())
-				.addColumn('version_id', 'text', col => col.notNull())
-				.addColumn('version', 'text', col => col.notNull())
-				.addColumn('timestamp', 'integer', col => col.notNull())
-				.addColumn('author', 'text', col => col.notNull())
-				.addColumn('message', 'text')
-				.addPrimaryKeyConstraint('diagram_history_pk', [
-					'diag_id',
-					'version_id',
-				])
-				.execute()
-		})
-
-		const execute = (sql: string, params: any[] = []) =>
+		const execute = (sql: string, params: unknown[] = []) =>
 			Effect.tryPromise({
 				try: () => client.execute(sql, params),
-				catch: _ => {
-					return new ErrorDbExecutionFailed({
+				catch: _ =>
+					new ErrorDbExecutionFailed({
 						message: 'Database operation failed',
-					})
-				},
+					}),
 			})
 
 		const batch = (statements: string[]) =>
-			Effect.tryPromise(() => client.batch(statements))
+			Effect.tryPromise({
+				try: () => client.batch(statements),
+				catch: _ =>
+					new ErrorDbExecutionFailed({
+						message: 'Database batch operation failed',
+					}),
+			})
 
 		return {
 			execute,

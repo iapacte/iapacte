@@ -1,99 +1,96 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "compileOnSave": true,
-  "compilerOptions": {
-    "preserveConstEnums": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "target": "ES2022",
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "jsx": "react-jsx",
-    "importHelpers": true,
-    "baseUrl": ".",
-    "composite": true,
-    "alwaysStrict": true,
-    "moduleDetection": "force",
-    "exactOptionalPropertyTypes": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitOverride": true,
-    "noUncheckedIndexedAccess": true,
-    "strict": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "isolatedDeclarations": false,
-    "isolatedModules": true,
-    "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true,
-    "experimentalDecorators": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "skipDefaultLibCheck": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@aipacto/agents-domain": [
-        "../../agents/domain/src"
-      ],
-      "@aipacto/agents-infra-langchain": [
-        "../../agents/infrastructure/langchain/src"
-      ],
-      "@aipacto/harvesting-domain": [
-        "../../harvesting/domain/src"
-      ],
-      "@aipacto/harvesting-infra-pipeline": [
-        "../../harvesting/infrastructure/pipeline/src"
-      ],
-      "@aipacto/shared-domain": [
-        "../domain/src"
-      ],
-      "@aipacto/shared-ui-core": [
-        "../ui/core/src"
-      ],
-      "@aipacto/shared-ui-core/*": [
-        "../ui/core/src/*"
-      ],
-      "@aipacto/shared-ui-localization": [
-        "../ui/localization/src"
-      ],
-      "@aipacto/shared-ui-localization/*": [
-        "../ui/localization/src/*"
-      ],
-      "@aipacto/shared-utils-env": [
-        "../utils/env/src"
-      ],
-      "@aipacto/shared-utils-logging": [
-        "../utils/logging/src"
-      ],
-      "@aipacto/workspace-domain": [
-        "../../workspace/domain/src"
-      ],
-      "@aipacto/workspace-infra-authz": [
-        "../../workspace/infrastructure/authz/src"
-      ],
-      "@aipacto/workspace-infra-storage": [
-        "../../workspace/infrastructure/storage/src"
-      ],
-      "@inlang/recommend-sherlock": [
-        "../ui/localization/node_modules/@inlang/recommend-sherlock/src"
-      ],
-      "@inlang/sdk": [
-        "../ui/localization/node_modules/@inlang/sdk/src"
-      ],
-      "@inlang/sdk/*": [
-        "../ui/localization/node_modules/@inlang/sdk/src/*"
-      ]
-    },
-    "types": [
-      "node"
-    ]
-  },
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compileOnSave": true,
+	"compilerOptions": {
+		"preserveConstEnums": true,
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ES2022",
+		"resolveJsonModule": true,
+		"allowJs": true,
+		"jsx": "react-jsx",
+		"importHelpers": true,
+		"baseUrl": ".",
+		"composite": true,
+		"alwaysStrict": true,
+		"moduleDetection": "force",
+		"exactOptionalPropertyTypes": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noImplicitOverride": true,
+		"noUncheckedIndexedAccess": true,
+		"strict": true,
+		"strictFunctionTypes": true,
+		"strictNullChecks": true,
+		"strictPropertyInitialization": true,
+		"isolatedDeclarations": false,
+		"isolatedModules": true,
+		"useUnknownInCatchVariables": true,
+		"verbatimModuleSyntax": true,
+		"experimentalDecorators": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"paths": {
+			"@aipacto/agents-domain": [
+				"../../agents/domain/src"
+			],
+			"@aipacto/agents-infra-langchain": [
+				"../../agents/infrastructure/langchain/src"
+			],
+			"@aipacto/harvesting-domain": [
+				"../../harvesting/domain/src"
+			],
+			"@aipacto/harvesting-infra-pipeline": [
+				"../../harvesting/infrastructure/pipeline/src"
+			],
+			"@aipacto/shared-domain": [
+				"../domain/src"
+			],
+			"@aipacto/shared-ui-core": [
+				"../ui/core/src"
+			],
+			"@aipacto/shared-ui-core/*": [
+				"../ui/core/src/*"
+			],
+			"@aipacto/shared-ui-localization": [
+				"../ui/localization/src"
+			],
+			"@aipacto/shared-ui-localization/*": [
+				"../ui/localization/src/*"
+			],
+			"@aipacto/shared-utils-env": [
+				"../utils/env/src"
+			],
+			"@aipacto/shared-utils-logging": [
+				"../utils/logging/src"
+			],
+			"@aipacto/workspace-domain": [
+				"../../workspace/domain/src"
+			],
+			"@aipacto/workspace-infra-storage": [
+				"../../workspace/infrastructure/storage/src"
+			],
+			"@inlang/recommend-sherlock": [
+				"../ui/localization/node_modules/@inlang/recommend-sherlock/src"
+			],
+			"@inlang/sdk": [
+				"../ui/localization/node_modules/@inlang/sdk/src"
+			],
+			"@inlang/sdk/*": [
+				"../ui/localization/node_modules/@inlang/sdk/src/*"
+			]
+		},
+		"types": [
+			"node"
+		]
+	},
+	"exclude": [
+		"node_modules",
+		"dist"
+	]
 }
