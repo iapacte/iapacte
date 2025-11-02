@@ -2,6 +2,7 @@ import { Env } from '@aipacto/shared-utils-env'
 import { logAppServer } from '@aipacto/shared-utils-logging'
 import cors from '@fastify/cors'
 import formbodyPlugin from '@fastify/formbody'
+import multipartPlugin from '@fastify/multipart'
 import webSocketPlugin from '@fastify/websocket'
 import { createRequire } from 'node:module'
 import { Effect } from 'effect'
@@ -10,7 +11,7 @@ import Fastify from 'fastify'
 // import { routesAgents } from './routes/agents'
 // import { routesThreads } from './routes/threads'
 import { routesAuth } from './routes/auth'
-import { routesDocuments } from './routes/documents'
+import { routesFiles } from './routes/files'
 
 type ServerConfig = {
 	readonly environment: string
@@ -138,6 +139,12 @@ async function main() {
 	logAppServer.info('Registering Formbody plugin')
 	server.register(formbodyPlugin)
 
+	// Register multipart plugin for uploads
+	logAppServer.info('Registering Multipart plugin')
+	server.register(multipartPlugin, {
+		attachFieldsToBody: false,
+	})
+
 	// Register CORS
 	logAppServer.info('Registering CORS plugin')
 	server.register(cors, {
@@ -191,7 +198,7 @@ async function main() {
 	logAppServer.info('Registering application routes')
 
 	// await routesAgents(server)
-	await routesDocuments(server)
+	await routesFiles(server)
 	// await routesThreads(server)
 
 	try {

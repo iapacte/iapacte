@@ -1,7 +1,7 @@
 import { logAppServer } from '@aipacto/shared-utils-logging'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 
-import { auth } from '../utils/auth'
+import { auth } from '../lib/auth'
 
 /**
  * Registers authentication routes
@@ -51,7 +51,7 @@ export async function routesAuth(fastify: FastifyInstance) {
 					reply.header(key, value)
 				})
 				reply.send(response.body ? await response.text() : null)
-			} catch (error) {
+			} catch (_error) {
 				fastify.log.error('Authentication Error:')
 				reply.status(500).send({
 					error: 'Internal authentication error',

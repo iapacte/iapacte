@@ -1,5 +1,5 @@
 {
-	"extends": "@aipacto/shared-tsconfig/node.json",
+	"extends": ["@aipacto/shared-tsconfig/node.json", "./tsconfig.paths.json"],
 	"compilerOptions": {
 		"rootDir": "src",
 		"outDir": "dist"

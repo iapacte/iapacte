@@ -1,9 +1,8 @@
-import { Effect, Option } from 'effect'
+import { Effect } from 'effect'
 import type { FastifyInstance } from 'fastify'
 
-import { LoroDocumentService } from '../docs/loro'
-import { authenticateRequest } from '../utils/auth_helper'
-import { RuntimeClient } from '../utils/services' // Assume this is defined elsewhere, e.g., Effect.runtime
+import { authenticateRequest } from '../lib/auth_helper'
+import { LoroDocumentService, RuntimeClient } from '../services'
 
 interface CreateDocumentBody {
 	title: string
@@ -31,7 +30,7 @@ export async function routesDocuments(server: FastifyInstance) {
 		}
 	})
 
-	// Create new document
+	// Create new document (CRDT-backed "flow")
 	server.post<{ Body: CreateDocumentBody }>('/v1/docs', {
 		handler: async (request, reply) => {
 			const { title, description, path, initialContent } = request.body
@@ -42,13 +41,11 @@ export async function routesDocuments(server: FastifyInstance) {
 			try {
 				const result = await RuntimeClient.runPromise(
 					Effect.gen(function* () {
-						const docService = yield* LoroDocumentService
-						// Convert base64 to Uint8Array if provided
+						const service = yield* LoroDocumentService
 						const contentBytes = initialContent
 							? Uint8Array.from(Buffer.from(initialContent, 'base64'))
 							: undefined
-
-						yield* docService.createDocument(
+						yield* service.createDocument(
 							documentId,
 							title,
 							description,
@@ -56,13 +53,8 @@ export async function routesDocuments(server: FastifyInstance) {
 							userId,
 							contentBytes,
 						)
-						return { documentId, success: true }
-					}).pipe(
-						Effect.catchAll(error => {
-							request.log.error({ error }, 'Create error')
-							return Effect.succeed({ success: false, error: error.message })
-						}),
-					),
+						return { documentId, success: true as const }
+					}),
 				)
 				return reply.send(result)
 			} catch (error) {
@@ -72,29 +64,32 @@ export async function routesDocuments(server: FastifyInstance) {
 		},
 	})
 
-	// Get document
+	// Get document (metadata) or content with alt=media
 	server.get<{ Params: { docId: string } }>('/v1/docs/:docId', {
 		handler: async (request, reply) => {
 			const { docId } = request.params
 			try {
-				const result = await RuntimeClient.runPromise(
-					Effect.gen(function* () {
-						const docService = yield* LoroDocumentService
-						const docOpt = yield* docService.getDocument(docId)
-						if (Option.isNone(docOpt))
-							return { success: false, message: 'Not found' }
-						return { success: true, document: docOpt.value.toJSON().document }
-					}).pipe(
-						Effect.catchAll(error => {
-							request.log.error({ error }, 'Get error')
-							return Effect.succeed({
-								success: false,
-								error: JSON.stringify(error),
-							})
+				const query: any = (request as any).query ?? {}
+				const alt = typeof query.alt === 'string' ? query.alt : ''
+
+				if (alt === 'media') {
+					const snapshot = await RuntimeClient.runPromise(
+						Effect.gen(function* () {
+							const service = yield* LoroDocumentService
+							return yield* service.exportSnapshot(docId)
 						}),
-					),
+					)
+					reply.header('Content-Type', 'application/octet-stream')
+					return reply.send(Buffer.from(snapshot))
+				}
+
+				const metadata = await RuntimeClient.runPromise(
+					Effect.gen(function* () {
+						const service = yield* LoroDocumentService
+						return yield* service.readMetadata(docId)
+					}),
 				)
-				return reply.send(result)
+				return reply.send({ success: true, document: metadata })
 			} catch (error) {
 				request.log.error({ error }, 'Failed to get document')
 				return reply.status(500).send({ error: 'Failed to get document' })
@@ -112,15 +107,10 @@ export async function routesDocuments(server: FastifyInstance) {
 				try {
 					const result = await RuntimeClient.runPromise(
 						Effect.gen(function* () {
-							const docService = yield* LoroDocumentService
-							yield* docService.updateMetadata(docId, title, description, path)
-							return { success: true }
-						}).pipe(
-							Effect.catchAll(error => {
-								request.log.error({ error }, 'Update error')
-								return Effect.succeed({ success: false, error: error.message })
-							}),
-						),
+							const service = yield* LoroDocumentService
+							yield* service.updateMetadata(docId, title, description, path)
+							return { success: true as const }
+						}),
 					)
 					return reply.send(result)
 				} catch (error) {
@@ -138,15 +128,10 @@ export async function routesDocuments(server: FastifyInstance) {
 			try {
 				const result = await RuntimeClient.runPromise(
 					Effect.gen(function* () {
-						const docService = yield* LoroDocumentService
-						yield* docService.deleteDocument(docId)
-						return { success: true }
-					}).pipe(
-						Effect.catchAll(error => {
-							request.log.error({ error }, 'Delete error')
-							return Effect.succeed({ success: false, error: error.message })
-						}),
-					),
+						const service = yield* LoroDocumentService
+						yield* service.deleteDocument(docId)
+						return { success: true as const }
+					}),
 				)
 				return reply.send(result)
 			} catch (error) {
@@ -162,22 +147,15 @@ export async function routesDocuments(server: FastifyInstance) {
 			try {
 				const documents = await RuntimeClient.runPromise(
 					Effect.gen(function* () {
-						const docService = yield* LoroDocumentService
-						const ids = yield* docService.listDocuments()
-						const docs = []
+						const service = yield* LoroDocumentService
+						const ids = yield* service.listDocuments()
+						const out: Array<any> = []
 						for (const id of ids) {
-							const docOpt = yield* docService.getDocument(id)
-							if (Option.isSome(docOpt)) {
-								docs.push({ id, ...docOpt.value.toJSON().document })
-							}
+							const meta = yield* service.readMetadata(id)
+							out.push({ id, ...meta })
 						}
-						return docs
-					}).pipe(
-						Effect.catchAll(error => {
-							request.log.error({ error }, 'List error')
-							return Effect.succeed([])
-						}),
-					),
+						return out
+					}),
 				)
 				return reply.send({ documents })
 			} catch (error) {
@@ -187,33 +165,26 @@ export async function routesDocuments(server: FastifyInstance) {
 		},
 	})
 
-	// WebSocket sync
+	// WebSocket sync (real-time collaboration)
 	server.get(
 		'/v1/docs/:docId/sync',
 		{ websocket: true },
 		async (connection, request) => {
 			const { docId } = request.params as { docId: string }
 			const session = (request as any).session
-			const userId = session.user.id
-
-			const docOpt = await RuntimeClient.runPromise(
+			const _userId = session.user.id
+			const serverDoc = await RuntimeClient.runPromise(
 				Effect.gen(function* () {
-					const docService = yield* LoroDocumentService
-					return yield* docService.getDocument(docId)
-				}).pipe(
-					Effect.catchAll(error => {
-						request.log.error({ error }, 'WS get doc error')
-						return Effect.succeed(Option.none())
-					}),
-				),
+					const service = yield* LoroDocumentService
+					const opt = yield* service.getDocument(docId)
+					if (opt._tag === 'None') return undefined
+					return opt.value
+				}),
 			)
-
-			if (Option.isNone(docOpt)) {
+			if (!serverDoc) {
 				connection.close(1008, 'Document not found')
 				return
 			}
-
-			const serverDoc = docOpt.value
 			let isInitialSync = true
 
 			// Subscribe to document updates and forward to client
@@ -238,22 +209,16 @@ export async function routesDocuments(server: FastifyInstance) {
 							connection.send(currentState)
 						}
 
-						// Persist the changes
-						await RuntimeClient.runPromise(
-							Effect.gen(function* () {
-								const docService = yield* LoroDocumentService
-								yield* docService.applyUpdate(
-									docId,
-									new Uint8Array(message),
-									userId,
-								)
-							}).pipe(
-								Effect.catchAll(error => {
-									request.log.error({ error }, 'WS apply update error')
-									return Effect.void
+						try {
+							await RuntimeClient.runPromise(
+								Effect.gen(function* () {
+									const service = yield* LoroDocumentService
+									yield* service.applyUpdate(docId, new Uint8Array(message))
 								}),
-							),
-						)
+							)
+						} catch (err) {
+							request.log.error({ error: err }, 'WS apply update error')
+						}
 					} catch (error) {
 						request.log.error({ error }, 'Failed to process message')
 					}
@@ -263,6 +228,34 @@ export async function routesDocuments(server: FastifyInstance) {
 			connection.on('close', () => {
 				unsubscribe()
 			})
+		},
+	)
+
+	// HTTP sync fallback: accepts JSON { update: base64 }
+	server.post<{ Params: { docId: string }; Body: { update: string } }>(
+		'/v1/docs/:docId/sync',
+		{
+			handler: async (request, reply) => {
+				const { docId } = request.params
+				const { update } = request.body
+				try {
+					const merged = await RuntimeClient.runPromise(
+						Effect.gen(function* () {
+							const service = yield* LoroDocumentService
+							const bytes = Uint8Array.from(Buffer.from(update, 'base64'))
+							yield* service.applyUpdate(docId, bytes)
+							return yield* service.exportUpdate(docId)
+						}),
+					)
+					return reply.send({
+						success: true,
+						updates: Buffer.from(merged).toString('base64'),
+					})
+				} catch (error) {
+					request.log.error({ error }, 'Failed to sync document')
+					return reply.status(500).send({ success: false, error: 'Sync error' })
+				}
+			},
 		},
 	)
 }

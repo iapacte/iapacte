@@ -33,7 +33,9 @@ export class Database extends Effect.Service<Database>()('Database', {
 			client = createClient({
 				url,
 				// Some libsql servers can accept empty token (local/dev); pass only if present
-				...(Redacted.value(authToken) ? { authToken: Redacted.value(authToken) } : {}),
+				...(Redacted.value(authToken)
+					? { authToken: Redacted.value(authToken) }
+					: {}),
 			})
 		} else {
 			client = createClient({
@@ -51,6 +53,18 @@ export class Database extends Effect.Service<Database>()('Database', {
 				doc_id: string
 				version_id: string
 				version: string // JSON serialized VersionVector
+				timestamp: number
+				author: string
+				message: string | null
+			}
+			diagrams: {
+				id: string
+				snapshot: Uint8Array
+			}
+			diagram_history: {
+				diag_id: string
+				version_id: string
+				version: string
 				timestamp: number
 				author: string
 				message: string | null
@@ -96,18 +110,34 @@ export class Database extends Effect.Service<Database>()('Database', {
 					'version_id',
 				])
 				.execute()
+
+			await kysely.schema
+				.createTable('diagrams')
+				.ifNotExists()
+				.addColumn('id', 'text', col => col.primaryKey().notNull())
+				.addColumn('snapshot', 'blob', col => col.notNull())
+				.execute()
+
+			await kysely.schema
+				.createTable('diagram_history')
+				.ifNotExists()
+				.addColumn('diag_id', 'text', col => col.notNull())
+				.addColumn('version_id', 'text', col => col.notNull())
+				.addColumn('version', 'text', col => col.notNull())
+				.addColumn('timestamp', 'integer', col => col.notNull())
+				.addColumn('author', 'text', col => col.notNull())
+				.addColumn('message', 'text')
+				.addPrimaryKeyConstraint('diagram_history_pk', [
+					'diag_id',
+					'version_id',
+				])
+				.execute()
 		})
 
 		const execute = (sql: string, params: any[] = []) =>
 			Effect.tryPromise({
 				try: () => client.execute(sql, params),
-				catch: error => {
-					console.error('Database execute error:', {
-						error: error instanceof Error ? error.message : String(error),
-						sql: sql,
-						params: params?.length || 0,
-					})
-
+				catch: _ => {
 					return new ErrorDbExecutionFailed({
 						message: 'Database operation failed',
 					})
