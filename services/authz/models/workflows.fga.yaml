@@ -1,0 +1,388 @@
+name: Workflows Module Tests
+
+model_file: ./fga.mod
+
+tuples:
+  # Organizations
+  - user: user:alice
+    relation: owner
+    object: organization:acme_corp
+
+  - user: user:alice
+    relation: member
+    object: organization:acme_corp
+
+  - user: user:bob
+    relation: member
+    object: organization:acme_corp
+
+  # Groups
+  - user: user:alice
+    relation: direct_member
+    object: group:engineering
+
+  - user: user:bob
+    relation: direct_member
+    object: group:marketing
+
+  - user: user:charlie
+    relation: direct_member
+    object: group:operations
+
+  # Folders
+  - user: user:alice
+    relation: owner
+    object: folder:workflows_root
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:workflows_root
+
+  - user: folder:workflows_root
+    relation: parent
+    object: folder:engineering_workflows
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:engineering_workflows
+
+  - user: group:engineering#member
+    relation: editor
+    object: folder:engineering_workflows
+
+  # Folder grants can_run to users, which workflows inherit
+  - user: user:alice
+    relation: editor
+    object: folder:engineering_workflows
+
+  # Workflows - data pipeline workflow
+  - user: folder:engineering_workflows
+    relation: parent
+    object: workflow:data_pipeline
+
+  - user: organization:acme_corp
+    relation: org
+    object: workflow:data_pipeline
+
+  - user: user:alice
+    relation: owner
+    object: workflow:data_pipeline
+
+  # Workflows - reporting workflow with multiple roles
+  - user: folder:engineering_workflows
+    relation: parent
+    object: workflow:reporting_workflow
+
+  - user: organization:acme_corp
+    relation: org
+    object: workflow:reporting_workflow
+
+  - user: user:alice
+    relation: co_owner
+    object: workflow:reporting_workflow
+
+  - user: user:bob
+    relation: executor
+    object: workflow:reporting_workflow
+
+  - user: user:charlie
+    relation: scheduler
+    object: workflow:reporting_workflow
+
+  - user: group:operations#member
+    relation: auditor
+    object: workflow:reporting_workflow
+
+  # Workflows - public workflow
+  - user: folder:workflows_root
+    relation: parent
+    object: workflow:public_demo
+
+  - user: organization:acme_corp
+    relation: org
+    object: workflow:public_demo
+
+  - user: user:*
+    relation: viewer
+    object: workflow:public_demo
+
+  # Workflows - workflow with editor (not owner)
+  - user: folder:engineering_workflows
+    relation: parent
+    object: workflow:shared_workflow
+
+  - user: organization:acme_corp
+    relation: org
+    object: workflow:shared_workflow
+
+  - user: user:alice
+    relation: owner
+    object: workflow:shared_workflow
+
+  - user: user:bob
+    relation: editor
+    object: workflow:shared_workflow
+
+  # Workflows - workflow with specialized roles
+  - user: folder:engineering_workflows
+    relation: parent
+    object: workflow:advanced_workflow
+
+  - user: organization:acme_corp
+    relation: org
+    object: workflow:advanced_workflow
+
+  - user: user:alice
+    relation: owner
+    object: workflow:advanced_workflow
+
+  - user: user:dave
+    relation: integrator
+    object: workflow:advanced_workflow
+
+  - user: user:eve
+    relation: variables_manager
+    object: workflow:advanced_workflow
+
+  - user: user:frank
+    relation: version_manager
+    object: workflow:advanced_workflow
+
+  - user: user:grace
+    relation: alert_manager
+    object: workflow:advanced_workflow
+
+  - user: user:henry
+    relation: publisher
+    object: workflow:advanced_workflow
+
+tests:
+  - name: Test workflow owner permissions
+    check:
+      - user: user:alice
+        object: workflow:data_pipeline
+        assertions:
+          owner: true
+          can_view: true
+          can_edit: true
+          can_run: true
+          can_share: true
+          can_delete: true
+          can_clone: true
+          can_move: true
+          can_archive: true
+          can_lock: true
+          can_manage_schedule: true
+          can_view_logs: true
+          can_view_usage: true
+          can_view_audit: true
+          can_manage_variables: true
+          can_manage_triggers: true
+          can_manage_connections: true
+          can_manage_secrets: true
+          can_edit_interface: true
+          can_manage_versions: true
+          can_export_import: true
+          can_publish_template: true
+          can_manage_alerts: true
+
+  - name: Test workflow co-owner permissions
+    check:
+      - user: user:alice
+        object: workflow:reporting_workflow
+        assertions:
+          co_owner: true
+          can_view: true
+          can_edit: true
+          can_run: true
+          can_share: true
+          can_delete: true
+          can_clone: true
+          can_move: true
+          can_archive: true
+          can_lock: true
+
+  - name: Test workflow executor permissions
+    check:
+      - user: user:bob
+        object: workflow:reporting_workflow
+        assertions:
+          executor: true
+          can_view: true  # Through org member relation (viewer)
+          can_edit: false
+          can_run: true
+          can_view_logs: true
+          can_share: false
+          can_delete: false
+
+  - name: Test workflow scheduler permissions
+    check:
+      - user: user:charlie
+        object: workflow:reporting_workflow
+        assertions:
+          scheduler: true
+          can_view: false
+          can_edit: false
+          can_run: false
+          can_manage_schedule: true
+          can_manage_triggers: true
+          can_share: false
+
+  - name: Test workflow auditor permissions
+    check:
+      - user: user:charlie
+        object: workflow:reporting_workflow
+        assertions:
+          auditor: true
+          can_view: false
+          can_edit: false
+          can_run: false
+          can_view_logs: true
+          can_view_usage: true
+          can_view_audit: true
+          can_share: false
+          can_delete: false
+
+  - name: Test workflow specialized role permissions
+    check:
+      - user: user:dave
+        object: workflow:advanced_workflow
+        assertions:
+          integrator: true
+          can_view: false
+          can_edit: false
+          can_manage_triggers: true
+          can_manage_connections: true
+          can_manage_secrets: true
+
+      - user: user:eve
+        object: workflow:advanced_workflow
+        assertions:
+          variables_manager: true
+          can_view: false
+          can_edit: false
+          can_manage_variables: true
+
+      - user: user:frank
+        object: workflow:advanced_workflow
+        assertions:
+          version_manager: true
+          can_view: false
+          can_edit: false
+          can_manage_versions: true
+          can_export_import: true
+
+      - user: user:grace
+        object: workflow:advanced_workflow
+        assertions:
+          alert_manager: true
+          can_view: false
+          can_edit: false
+          can_manage_alerts: true
+
+      - user: user:henry
+        object: workflow:advanced_workflow
+        assertions:
+          publisher: true
+          can_view: false
+          can_edit: false
+          can_publish_template: true
+
+  - name: Test workflow viewer permissions
+    check:
+      - user: user:alice
+        object: workflow:reporting_workflow
+        assertions:
+          viewer: true  # Through org member relation (viewer: ... or member from org)
+          can_view: true  # Through co_owner and viewer
+
+      - user: user:bob
+        object: workflow:reporting_workflow
+        assertions:
+          viewer: true  # Through org member relation
+          can_view: true  # Through viewer relation
+
+  - name: Test workflow public access
+    check:
+      - user: user:charlie
+        object: workflow:public_demo
+        assertions:
+          viewer: true
+          can_view: true
+          can_edit: false
+          can_run: false
+          can_share: false
+          can_delete: false
+
+  - name: Test workflow organization member visibility
+    check:
+      - user: user:bob
+        object: workflow:data_pipeline
+        assertions:
+          viewer: true  # Through org member relation
+          can_view: true
+          can_edit: false
+          can_run: false
+
+  - name: Test workflow parent folder run permission inheritance
+    check:
+      - user: user:alice
+        object: workflow:data_pipeline
+        assertions:
+          can_run: true  # Through editor role on parent folder (engineering_workflows)
+
+      - user: user:bob
+        object: workflow:data_pipeline
+        assertions:
+          can_run: false  # Bob is in marketing group, not engineering
+
+  - name: Test workflow parent folder share permission inheritance
+    check:
+      - user: user:alice
+        object: folder:engineering_workflows
+        assertions:
+          can_share: true  # Through editor role
+
+      - user: user:alice
+        object: workflow:data_pipeline
+        assertions:
+          can_share: true  # Inherited from parent folder
+
+  - name: Test workflow editor permissions
+    check:
+      - user: user:alice
+        object: workflow:data_pipeline
+        assertions:
+          owner: true
+          editor: false  # Owner is not editor (different relation)
+          can_view: true
+          can_edit: true  # Through owner
+          can_run: true  # Through owner
+
+      - user: user:bob
+        object: workflow:shared_workflow
+        assertions:
+          owner: false
+          editor: true  # Explicit editor relation
+          can_view: true
+          can_edit: true  # Through editor
+          can_run: false  # Editor does NOT grant can_run (only owner, co_owner, executor, or from parent)
+          can_share: true  # Through editor
+          can_delete: false  # Editor cannot delete
+
+  - name: Test workflow user without access
+    check:
+      - user: user:charlie
+        object: workflow:data_pipeline
+        assertions:
+          owner: false
+          co_owner: false
+          editor: false
+          executor: false
+          viewer: false
+          can_view: false
+          can_edit: false
+          can_run: false
+          can_share: false
+          can_delete: false
+

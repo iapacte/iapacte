@@ -1,0 +1,339 @@
+name: Content Module Tests
+
+model_file: ./fga.mod
+
+tuples:
+  # Organizations
+  - user: user:alice
+    relation: owner
+    object: organization:acme_corp
+
+  - user: user:alice
+    relation: member
+    object: organization:acme_corp
+
+  - user: user:bob
+    relation: member
+    object: organization:acme_corp
+
+  # Groups
+  - user: user:alice
+    relation: direct_member
+    object: group:engineering
+
+  - user: user:bob
+    relation: direct_member
+    object: group:marketing
+
+  # Folders - root folder
+  - user: user:alice
+    relation: owner
+    object: folder:root
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:root
+
+  # Folders - projects folder under root
+  - user: folder:root
+    relation: parent
+    object: folder:projects
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:projects
+
+  # Folders - engineering folder under projects
+  - user: folder:projects
+    relation: parent
+    object: folder:engineering_docs
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:engineering_docs
+
+  - user: user:alice
+    relation: co_owner
+    object: folder:engineering_docs
+
+  - user: group:engineering#member
+    relation: editor
+    object: folder:engineering_docs
+
+  # Folders - marketing folder under projects
+  - user: folder:projects
+    relation: parent
+    object: folder:marketing_docs
+
+  - user: organization:acme_corp
+    relation: org
+    object: folder:marketing_docs
+
+  - user: user:bob
+    relation: owner
+    object: folder:marketing_docs
+
+  - user: group:marketing#member
+    relation: editor
+    object: folder:marketing_docs
+
+  # Folders - public folder with public access
+  - user: folder:root
+    relation: parent
+    object: folder:public_resources
+
+  - user: user:*
+    relation: viewer
+    object: folder:public_resources
+
+  # Folders - shared folder with uploader role
+  - user: folder:root
+    relation: parent
+    object: folder:shared_folder
+
+  - user: user:charlie
+    relation: uploader
+    object: folder:shared_folder
+
+  - user: user:dave
+    relation: previewer
+    object: folder:shared_folder
+
+  # Files - technical spec in engineering folder
+  - user: folder:engineering_docs
+    relation: parent
+    object: file:technical_spec
+
+  - user: organization:acme_corp
+    relation: org
+    object: file:technical_spec
+
+  - user: user:alice
+    relation: owner
+    object: file:technical_spec
+
+  # Files - marketing plan in marketing folder
+  - user: folder:marketing_docs
+    relation: parent
+    object: file:marketing_plan
+
+  - user: organization:acme_corp
+    relation: org
+    object: file:marketing_plan
+
+  - user: user:bob
+    relation: co_owner
+    object: file:marketing_plan
+
+  # Files - public file
+  - user: folder:public_resources
+    relation: parent
+    object: file:public_template
+
+  - user: user:*
+    relation: viewer
+    object: file:public_template
+
+tests:
+  - name: Test folder owner permissions
+    check:
+      - user: user:alice
+        object: folder:root
+        assertions:
+          owner: true
+          collaborator: true
+          can_list_children: true
+          can_create_subfolder: true
+          can_upload: true
+          can_preview: true
+          can_read: true
+          can_write: true
+          can_share: true
+          can_delete: true
+          can_create_workflow: true
+          can_run: true
+
+  - name: Test folder permission inheritance
+    check:
+      - user: user:alice
+        object: folder:projects
+        assertions:
+          owner: false
+          collaborator: true  # Inherited from root owner
+          can_list_children: true  # Inherited
+          can_create_subfolder: true  # Inherited
+          can_upload: true  # Inherited
+          can_read: true  # Inherited
+          can_write: true  # Inherited
+          can_share: true  # Inherited
+          can_delete: false  # Only direct owner can delete
+          can_create_workflow: true  # Inherited
+
+      - user: user:alice
+        object: folder:engineering_docs
+        assertions:
+          owner: false
+          co_owner: true
+          collaborator: true
+          can_list_children: true
+          can_create_subfolder: true
+          can_upload: true
+          can_read: true
+          can_write: true
+          can_share: true
+          can_delete: true  # co_owner can delete
+          can_create_workflow: true
+
+  - name: Test folder group-based permissions
+    check:
+      - user: user:alice
+        object: folder:engineering_docs
+        assertions:
+          editor: true  # Through engineering group
+          collaborator: true
+          can_read: true
+          can_write: true
+
+      - user: user:bob
+        object: folder:engineering_docs
+        assertions:
+          editor: false
+          collaborator: true  # Through org member relation (viewer)
+          can_list_children: true  # Through viewer/collaborator
+          can_read: true  # Through viewer/collaborator
+          can_write: false  # Viewer cannot write
+
+      - user: user:bob
+        object: folder:marketing_docs
+        assertions:
+          owner: true
+          editor: true  # Through marketing group
+          collaborator: true
+          can_read: true
+          can_write: true
+          can_delete: true
+
+  - name: Test folder public access
+    check:
+      - user: user:charlie
+        object: folder:public_resources
+        assertions:
+          viewer: true
+          collaborator: true
+          can_list_children: true
+          can_preview: true
+          can_read: true
+          can_create_subfolder: false
+          can_upload: false
+          can_write: false
+          can_share: false
+          can_delete: false
+
+  - name: Test folder role-specific permissions
+    check:
+      - user: user:charlie
+        object: folder:shared_folder
+        assertions:
+          uploader: true
+          collaborator: true
+          can_upload: true
+          can_preview: false  # Uploader doesn't grant preview
+          can_read: false  # Uploader doesn't grant read
+          can_write: false
+          can_share: false
+
+      - user: user:dave
+        object: folder:shared_folder
+        assertions:
+          previewer: true
+          collaborator: true
+          can_preview: true
+          can_read: false  # Previewer doesn't grant read
+          can_upload: false
+          can_write: false
+
+  - name: Test folder organization member access
+    check:
+      - user: user:bob
+        object: folder:root
+        assertions:
+          viewer: true  # Through org member relation
+          collaborator: true
+          can_list_children: true
+          can_read: true
+          can_preview: true
+
+  - name: Test file owner permissions
+    check:
+      - user: user:alice
+        object: file:technical_spec
+        assertions:
+          owner: true
+          collaborator: true
+          can_preview: true
+          can_read: true
+          can_write: true
+          can_share: true
+          can_delete: true
+
+  - name: Test file permission inheritance from folder
+    check:
+      - user: user:alice
+        object: file:technical_spec
+        assertions:
+          owner: true
+          can_preview: true
+          can_read: true
+          can_write: true
+          can_share: true  # Inherited from folder
+          can_delete: true
+
+      - user: user:bob
+        object: file:technical_spec
+        assertions:
+          owner: false
+          collaborator: true  # Through org member relation (viewer)
+          can_preview: true  # Through viewer/collaborator
+          can_read: true  # Through viewer/collaborator
+          can_write: false  # Viewer cannot write
+          can_share: false  # Viewer cannot share
+          can_delete: false  # Viewer cannot delete
+
+  - name: Test file co-owner permissions
+    check:
+      - user: user:bob
+        object: file:marketing_plan
+        assertions:
+          co_owner: true
+          collaborator: true
+          can_preview: true
+          can_read: true
+          can_write: true
+          can_share: true
+          can_delete: true
+
+  - name: Test file public access
+    check:
+      - user: user:charlie
+        object: file:public_template
+        assertions:
+          viewer: true
+          collaborator: true
+          can_preview: true
+          can_read: true
+          can_write: false
+          can_share: false
+          can_delete: false
+
+  - name: Test file organization member access
+    check:
+      - user: user:bob
+        object: file:technical_spec
+        assertions:
+          viewer: true  # Through org member relation
+          collaborator: true
+          can_preview: true
+          can_read: true
+          can_write: false
+          can_share: false
+

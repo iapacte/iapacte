@@ -1,0 +1,190 @@
+name: Groups Module Tests
+
+model_file: ./fga.mod
+
+tuples:
+  # Organizations for group scoping
+  - user: user:alice
+    relation: owner
+    object: organization:acme_corp
+
+  # Direct group members
+  - user: user:alice
+    relation: direct_member
+    object: group:engineering
+
+  - user: user:bob
+    relation: direct_member
+    object: group:engineering
+
+  - user: user:charlie
+    relation: direct_member
+    object: group:marketing
+
+  - user: user:dave
+    relation: direct_member
+    object: group:sales
+
+  # Group admins
+  - user: user:alice
+    relation: admin
+    object: group:engineering
+
+  - user: user:eve
+    relation: admin
+    object: group:marketing
+
+  # Group organization links (organization has in_org relation to group)
+  - user: organization:acme_corp
+    relation: in_org
+    object: group:engineering
+
+  - user: organization:acme_corp
+    relation: in_org
+    object: group:marketing
+
+  # Subgroup hierarchy
+  # engineering is a subgroup of tech_teams
+  - user: group:engineering
+    relation: subgroup
+    object: group:tech_teams
+
+  # marketing is a subgroup of business_teams
+  - user: group:marketing
+    relation: subgroup
+    object: group:business_teams
+
+  # sales is a subgroup of business_teams
+  - user: group:sales
+    relation: subgroup
+    object: group:business_teams
+
+  # tech_teams is a subgroup of all_staff
+  - user: group:tech_teams
+    relation: subgroup
+    object: group:all_staff
+
+  # business_teams is a subgroup of all_staff
+  - user: group:business_teams
+    relation: subgroup
+    object: group:all_staff
+
+  # Admin inheritance: tech_teams admin
+  - user: user:frank
+    relation: admin
+    object: group:tech_teams
+
+tests:
+  - name: Test direct group membership
+    check:
+      - user: user:alice
+        object: group:engineering
+        assertions:
+          direct_member: true
+          member: true
+          admin: true
+
+      - user: user:bob
+        object: group:engineering
+        assertions:
+          direct_member: true
+          member: true
+          admin: false
+
+  - name: Test subgroup membership inheritance
+    check:
+      - user: user:alice
+        object: group:tech_teams
+        assertions:
+          direct_member: false
+          member: true  # Inherited through engineering subgroup
+
+      - user: user:bob
+        object: group:tech_teams
+        assertions:
+          direct_member: false
+          member: true  # Inherited through engineering subgroup
+
+      - user: user:charlie
+        object: group:business_teams
+        assertions:
+          direct_member: false
+          member: true  # Inherited through marketing subgroup
+
+      - user: user:dave
+        object: group:business_teams
+        assertions:
+          direct_member: false
+          member: true  # Inherited through sales subgroup
+
+  - name: Test deep subgroup inheritance
+    check:
+      - user: user:alice
+        object: group:all_staff
+        assertions:
+          direct_member: false
+          member: true  # Inherited through engineering -> tech_teams -> all_staff
+
+      - user: user:bob
+        object: group:all_staff
+        assertions:
+          direct_member: false
+          member: true  # Inherited through engineering -> tech_teams -> all_staff
+
+      - user: user:charlie
+        object: group:all_staff
+        assertions:
+          direct_member: false
+          member: true  # Inherited through marketing -> business_teams -> all_staff
+
+      - user: user:dave
+        object: group:all_staff
+        assertions:
+          direct_member: false
+          member: true  # Inherited through sales -> business_teams -> all_staff
+
+  - name: Test admin inheritance
+    check:
+      - user: user:alice
+        object: group:tech_teams
+        assertions:
+          admin: true  # Inherited from engineering subgroup (alice is admin of engineering, which is subgroup of tech_teams)
+          member: true
+
+      - user: user:frank
+        object: group:tech_teams
+        assertions:
+          admin: true
+
+      - user: user:frank
+        object: group:engineering
+        assertions:
+          admin: false  # Admin from subgroup only works child-to-parent, not parent-to-child
+          member: false  # Also not a member
+
+  - name: Test group organization link
+    # Note: in_org is a reverse relation (organization -> group)
+    # The tuple existence verifies the relationship is established
+    # This test verifies the tuples are correctly set up
+    check:
+      - user: user:alice
+        object: group:engineering
+        assertions:
+          member: true  # Verify group membership still works with org link
+
+  - name: Test user not in group
+    check:
+      - user: user:charlie
+        object: group:engineering
+        assertions:
+          direct_member: false
+          member: false
+          admin: false
+
+      - user: user:alice
+        object: group:marketing
+        assertions:
+          direct_member: false
+          member: false
+          admin: false
+

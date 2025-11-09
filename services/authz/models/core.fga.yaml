@@ -1,0 +1,18 @@
+name: Core Module Tests
+
+model_file: ./fga.mod
+
+tuples:
+  # Basic user entities (no relations needed for core module)
+  # Users are just referenced by their type
+
+tests:
+  - name: Test user type exists
+    check:
+      - user: user:alice
+        object: user:alice
+        assertions:
+          # Core module only defines the user type, no relations
+          # This test verifies the model loads correctly
+          # In practice, user type is used as a subject in other modules
+

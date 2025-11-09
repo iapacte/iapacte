@@ -1,0 +1,139 @@
+name: Organizations Module Tests
+
+model_file: ./fga.mod
+
+tuples:
+  # Organization owners
+  - user: user:alice
+    relation: owner
+    object: organization:acme_corp
+
+  - user: user:bob
+    relation: owner
+    object: organization:startup_inc
+
+  # Organization admins
+  - user: user:charlie
+    relation: admin
+    object: organization:acme_corp
+
+  # Organization members
+  - user: user:dave
+    relation: member
+    object: organization:acme_corp
+
+  - user: user:eve
+    relation: member
+    object: organization:acme_corp
+
+  # Admin via group membership
+  - user: user:frank
+    relation: direct_member
+    object: group:executives
+
+  - user: group:executives#member
+    relation: admin
+    object: organization:acme_corp
+
+  # Member via group membership
+  - user: user:grace
+    relation: direct_member
+    object: group:employees
+
+  - user: group:employees#member
+    relation: member
+    object: organization:acme_corp
+
+  # Exempt external restrictions
+  - user: user:external_collaborator
+    relation: exempt_external_restrictions
+    object: organization:acme_corp
+
+tests:
+  - name: Test organization owner permissions
+    check:
+      - user: user:alice
+        object: organization:acme_corp
+        assertions:
+          owner: true
+          admin: false
+          member: false
+          can_view: true
+          can_manage: true
+
+  - name: Test organization admin permissions
+    check:
+      - user: user:charlie
+        object: organization:acme_corp
+        assertions:
+          owner: false
+          admin: true
+          member: false
+          can_view: true
+          can_manage: true
+
+  - name: Test organization member permissions
+    check:
+      - user: user:dave
+        object: organization:acme_corp
+        assertions:
+          owner: false
+          admin: false
+          member: true
+          can_view: true
+          can_manage: false
+
+  - name: Test admin via group membership
+    check:
+      - user: user:frank
+        object: organization:acme_corp
+        assertions:
+          owner: false
+          admin: true
+          member: false
+          can_view: true
+          can_manage: true
+
+  - name: Test member via group membership
+    check:
+      - user: user:grace
+        object: organization:acme_corp
+        assertions:
+          owner: false
+          admin: false
+          member: true
+          can_view: true
+          can_manage: false
+
+  - name: Test exempt external restrictions
+    check:
+      - user: user:external_collaborator
+        object: organization:acme_corp
+        assertions:
+          exempt_external_restrictions: true
+          owner: false
+          admin: false
+          member: false
+
+  - name: Test user without organization access
+    check:
+      - user: user:alice
+        object: organization:startup_inc
+        assertions:
+          owner: false
+          admin: false
+          member: false
+          can_view: false
+          can_manage: false
+
+  - name: Test organization isolation
+    check:
+      - user: user:bob
+        object: organization:acme_corp
+        assertions:
+          owner: false
+          admin: false
+          member: false
+          can_view: false
+          can_manage: false
+
