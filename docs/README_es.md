@@ -1,78 +1,79 @@
-# Aipacto
+# Iapacte
 
-**English**: For the English version of this README, see [`README.md`](../README.md).
+**Inglés**: Para la versión en inglés de este README, consulta [`README.md`](../README.md).
 
-## Visión y Misión
+Iapacte está construyendo el Sistema Operativo para gobiernos regionales: una plataforma compartida donde ayuntamientos, personal público y ciudadanía colaboran con herramientas modernas, asistentes de IA en tiempo real y datos gobernados. Todo lo que diseñamos se basa en lo que las administraciones nos han contado que les duele hoy: duplicación de trabajo, herramientas frágiles, datos desconectados y falta de una base común sobre la que construir.
 
-Aipacto es un Sistema Operativo de código abierto, impulsado por IA y diseñado para revolucionar la eficiencia y la transparencia en ayuntamientos y gobiernos locales. Nuestra visión es establecer un nuevo estándar mundial para la IA en la administración pública, comenzando en España y expandiéndonos internacionalmente. Aprovechando modelos de lenguaje avanzados y una integración de datos exhaustiva, empoderamos a los gobiernos locales con herramientas inteligentes que optimizan las operaciones y mejoran la prestación de servicios públicos.
+## ¿Por qué Iapacte ahora?
 
-### ¿Por qué Aipacto?
+- **Impacto público primero**: Más de 8.000 municipios en España gestionan miles de millones al año y aún dependen de hojas de cálculo, cadenas de correos y proveedores a medida. Les damos un espacio de trabajo cohesivo que controlan de verdad.
+- **Conocimiento y procesos reutilizables**: Los ayuntamientos repiten los mismos procedimientos cada día. Empaquetamos buenas prácticas para compartirlas, adaptarlas y ejecutarlas con seguridad entre municipios.
+- **Núcleo extensible**: Al tratar Iapacte como un OS “API-first”, cualquier departamento, proveedor o hacker cívico puede conectar flujos, datos y apps verticales sin empezar de cero.
 
-- **Optimizar las Operaciones Públicas**: Automatizar y optimizar procesos administrativos complejos, reduciendo la burocracia y mejorando la eficiencia.
-- **Gobernanza Basada en Datos**: Transformar grandes volúmenes de datos públicos en información accionable para una mejor toma de decisiones.
-- **Escalable y Sostenible**: Diseñado para municipios de todos los tamaños, con una versión gratuita autoalojada y soluciones empresariales en la nube para una viabilidad a largo plazo.
+## Pilares estratégicos
 
-### Primera Aplicación: Generador de Licitaciones Impulsado por IA
+1. **Compartir y transferir conocimiento**  
+   Los ayuntamientos reutilizan listas de verificación, plantillas, flujos y lecciones aprendidas de sus pares en lugar de rehacerlas desde cero. Un motor de descubrimiento integrado busca y recomienda experiencias y proyectos de otras organizaciones —artículos, blogs y casos de estudio— en el país y fuera, para aprender rápido y activar nuevas conexiones.  
+   _Ejemplo: Cuando Manresa necesita un plan de respuesta a inundaciones, parte de la plantilla aprobada de Girona, cambia los contactos y publica el plan en minutos._
 
-Nuestra aplicación insignia revoluciona la contratación pública aprovechando datos exhaustivos de los portales de licitación gubernamentales de España:
+2. **Espacio de documentos tipo Dropbox**  
+   Expedientes, carpetas de casos y archivos institucionales conviven en una biblioteca segura, con permisos correctos de serie y enlaces directos a workflows.  
+   _Ejemplo: Cultura sube el último dossier de subvenciones a una carpeta compartida y la comisión intermunicipal lo abre sin perseguir adjuntos por email._
 
-**Para Técnicos de Contratación:**
+3. **Automatización de workflows**  
+   Flujos visuales y reutilizables gestionan aprobaciones, validaciones y recordatorios para que las personas se centren en lo importante.  
+   _Ejemplo: Una trabajadora social lanza un flujo de alta que pre-rellena formularios, envía firmas a Secretaría y avisa a Hacienda cuando hay que liberar fondos._
 
-- "Genera un pliego de licitación completo para servicios de mantenimiento de carreteras basado en licitaciones similares exitosas"
-- "Analiza las tendencias de precios del mercado para servicios de TI en municipios de tamaño similar"
-- "Crea las especificaciones técnicas para proyectos de alumbrado urbano utilizando las mejores prácticas de otras ciudades"
-- "Redacta los criterios de evaluación que cumplan con la ley de contratación pública española"
+4. **Datos gobernados y accesibles**  
+   Tablas tipo hoja de cálculo, familiares para el usuario, que conectan con fuentes internas y externas, registran cada cambio y están listas para la IA.  
+   _Ejemplo: Movilidad combina sensores de tráfico con conteos manuales en una sola tabla que genera automáticamente el informe semanal para el pleno._
 
-**Para el Personal Municipal:**
+5. **Suite de aplicaciones específicas**  
+   Apps verticales sobre el núcleo compartido: redactor de licitaciones, comparador de concursos, chats contextuales y herramientas para contratación, urbanismo, servicios sociales, etc.  
+   _Ejemplo: Urbanismo usa la app de comparación de zonificación para revisar cómo municipios similares abordaron nuevas torres antes de emitir una recomendación._
 
-- "Encuentra licitaciones similares de otros ayuntamientos para contratos de gestión de residuos"
-- "Analiza los requisitos de una licitación y sugiere mejoras basadas en adjudicaciones exitosas"
-- "Genera cronogramas de contratación que cumplan con los requisitos legales"
-- "Crea justificaciones presupuestarias utilizando datos municipales comparables"
+6. **Base API-first**  
+   Cada capacidad se expone vía APIs con permisos granulares de estilo ReBAC, para que departamentos, contratistas y socios cívicos extiendan la plataforma de forma segura.  
+   _Ejemplo: Un consorcio regional conecta su portal ciudadano con los permisos de Iapacte y permite a contratistas subir avances sin crear más cuentas._
 
-**Características Clave:**
+7. **IA como capa transversal**  
+   La asistencia inteligente aparece en todos los módulos: redacta textos, detecta pasos que faltan y sugiere próximos movimientos respetando siempre la gobernanza.  
+   _Ejemplo: Al redactar un informe de contratación, el asistente sugiere lenguaje conforme, enlaza documentos citados y avisa de anexos faltantes antes de presentar._
 
-- **Integración Exhaustiva de Datos**: Accede a todas las licitaciones publicadas en los portales gubernamentales de España (PLACSP, plataformas autonómicas).
-- **Generación Inteligente de Documentos**: Crea pliegos de licitación conformes a la ley utilizando plantillas de éxito.
-- **Inteligencia de Mercado**: Proporciona información sobre precios y análisis de proveedores.
-- **Cumplimiento Legal**: Garantiza que todos los documentos cumplan con la normativa de contratación pública española.
+_Resumen: conocimiento compartido + documentos + automatización + datos gobernados + apps verticales + API-first + IA en todas partes._
 
-### Impacto Económico y Social
+## Primera ola de aplicaciones
 
-- **España**: Más de 8.000 municipios que gestionan más de 60.000 M€ en contratación anual. Incluso una adopción del 5% podría optimizar más de 3.000 M€ en gasto público.
-- **Eficiencia en la Contratación**: Reducir el tiempo de preparación de licitaciones en un 70%, mejorando al mismo tiempo la calidad y el cumplimiento normativo.
-- **Inteligencia de Mercado**: Facilitar mejores negociaciones de precios, con un ahorro potencial del 2-5% en contratos municipales.
-- **Escalabilidad**: Comenzando en España con planes de expansión a la UE, aprovechando las capacidades de IA multilingüe.
+### Suite de contratación pública con IA
 
-## Arquitectura y Stack Tecnológico
+Empezamos por contratación pública porque impacta a todos los departamentos y evidencia los vacíos anteriores.
 
-Aipacto está construido con una arquitectura moderna y de nivel empresarial:
+- **Redactor de licitaciones**: Genera documentos conformes (pliegos, criterios de evaluación, informes de adjudicación) usando plantillas municipales de referencia y alineadas con la ley española.
+- **Inteligencia comparativa**: Enseña licitaciones similares, referencias de precios y actividad de proveedores en portales nacionales y autonómicos (PLACSP y otros).
+- **Workflows guiados**: Sugiere circuitos de aprobación, plazos y paquetes documentales para avanzar más rápido y con trazabilidad.
 
-- **Arquitectura Limpia y DDD**: Organizado en contextos delimitados (*bounded contexts*) siguiendo los principios de Arquitectura Limpia y Diseño Guiado por el Dominio (*Domain-Driven Design*) para mantenibilidad y escalabilidad.
-- **TypeScript en todo el stack**: Desarrollo full-stack en TypeScript para consistencia, seguridad y productividad del desarrollador.
-- **Frontend**: React, React Native, Expo con Tamagui (Material Design 3) para aplicaciones municipales multiplataforma.
-- **Backend**: Fastify (Node.js), Effect para programación funcional, contenedorizado para un despliegue multi-tenant seguro.
-- **Orquestación de IA**: LangChain, LangGraph para flujos de trabajo multi-agente que procesan documentos de licitación y datos de contratación.
-- **Integración de Datos**: Rastreadores (*crawlers*) exhaustivos para los portales de licitación gubernamentales de España (PLACSP, plataformas autonómicas).
-- **Búsqueda y Analítica**: Qdrant para búsqueda semántica en documentos de licitación, PostgreSQL para datos estructurados.
-- **Soporte para LLMs**: Modelos optimizados para español con *fallback* a OpenAI, Claude y otros proveedores.
-- **Seguridad y Cumplimiento Normativo**: Diseñado para los requisitos del sector público con registros de auditoría y protección de datos.
+### Próximas experiencias verticales
 
-## Componentes Principales
+- Chat contextual para personal y ciudadanía, basado en datos gobernados de la organización.
+- Espacios colaborativos de conocimiento para borradores de políticas, subvenciones o programas compartidos entre municipios.
+- Kits de automatización para urbanismo, servicios sociales y mantenimiento de infraestructuras.
 
-1. **Interfaz del Generador de Licitaciones**: Aplicación multiplataforma (web/móvil) para crear y gestionar documentos de contratación.
-2. **Rastreadores de Datos de Licitaciones de España**: Scripts automatizados para recopilar y estructurar datos de licitaciones de portales gubernamentales.
-3. **Agentes de IA para Contratación Pública**: Sistema multi-agente especializado en el análisis de licitaciones, generación de documentos y verificación del cumplimiento normativo.
-4. **APIs Municipales**: Servidor Fastify que gestiona los flujos de trabajo de contratación, el procesamiento de documentos y la inteligencia de licitaciones.
+## Arquitectura y stack tecnológico
 
-## Cómo Colaborar
+- **Arquitectura Limpia + DDD** para desacoplar lo municipal, la infraestructura y la IA.
+- **TypeScript en todo el stack** (Node ≥22, pnpm v9) con Effect 3 para concurrencia estructurada y LangChain/LangGraph para flujos de agentes.
+- **Frontend**: React 19 + Vite 6 + TanStack Router (rutas por archivos) con tokens MD3 en Tailwind, componentes Base UI, animaciones con Motion.dev y stores con Effect Atom.
+- **Backend**: Servicios Fastify, almacenamiento gobernado, Qdrant/PostgreSQL para búsqueda semántica y datos relacionales, y autenticación preparada para ReBAC.
+- **DevX**: Nix Flake fija la toolchain, Turbo orquesta el monorepo, Biome aplica formato/lint y Paraglide gestiona la localización en los paquetes compartidos.
 
-Estamos desarrollando activamente la aplicación del generador de licitaciones y los agentes de IA para la contratación. Si te interesa revolucionar la contratación pública a través de la IA y hacer más eficientes las operaciones municipales, ¡nos encantaría que contribuyeras!
+## Puesta en marcha
 
-Antes de empezar, por favor, lee nuestra [Guía de Contribución](../CONTRIBUTING.md) para ver las instrucciones de configuración, los estándares de codificación y el flujo de trabajo para las contribuciones.
+1. `nix develop` (o `direnv allow`) para entrar en la toolchain fijada.  
+2. `pnpm install && pnpm prepare` para instalar dependencias y ganchos de Lefthook.  
+3. Explora `apps/server`, `apps/web` y los paquetes en `packages/` para dominio, UI e infraestructura.  
+4. Ejecuta `pnpm web` o `pnpm server` para desarrollo local, y `pnpm lint`, `pnpm check-types`, `pnpm build` antes de abrir un PR.  
+5. Lee la [Guía de Contribución](../CONTRIBUTING.md) para estándares de código, límites DDD y expectativas de PR.
 
 ## Licencia
 
-Licencia GNU Affero General Public License v3.0.
-
-Consulta el archivo [LICENSE](../LICENSE.md) para ver todos los detalles.
+Licenciado bajo GNU Affero General Public License v3.0. Consulta [LICENSE](../LICENSE.md) para los detalles.
