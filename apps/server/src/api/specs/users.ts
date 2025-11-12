@@ -36,15 +36,19 @@ const OrganizationUserPathParams = Schema.Struct({
 	userId: OrganizationUserId,
 })
 
+/**
+ * TODO(authz): Permission checks are temporarily disabled; re-enable when ready.
+ */
 export class GroupUsersSpec extends HttpApiGroup.make('Users')
 	.prefix('/organizations/{orgId}')
+	.middleware(SessionSpec)
 	.add(
 		HttpApiEndpoint.get('listUsers', '/users')
 			.setUrlParams(OrganizationPathParams)
 			.addSuccess(Schema.Array(OrganizationUser))
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
-			.middleware(SessionSpec),
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden),
 	)
 	.add(
 		HttpApiEndpoint.post('inviteUser', '/users')
@@ -53,8 +57,8 @@ export class GroupUsersSpec extends HttpApiGroup.make('Users')
 			.addSuccess(OrganizationUser)
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
-			.middleware(SessionSpec),
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden),
 	)
 	.add(
 		HttpApiEndpoint.get('getUser', '/users/{userId}')
@@ -62,8 +66,8 @@ export class GroupUsersSpec extends HttpApiGroup.make('Users')
 			.addSuccess(OrganizationUser)
 			.addError(HttpApiError.NotFound)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
-			.middleware(SessionSpec),
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden),
 	)
 	.add(
 		HttpApiEndpoint.patch('updateUser', '/users/{userId}')
@@ -73,8 +77,8 @@ export class GroupUsersSpec extends HttpApiGroup.make('Users')
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.NotFound)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
-			.middleware(SessionSpec),
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden),
 	)
 	.add(
 		HttpApiEndpoint.del('removeUser', '/users/{userId}')
@@ -82,6 +86,6 @@ export class GroupUsersSpec extends HttpApiGroup.make('Users')
 			.addSuccess(Schema.Struct({ removed: Schema.Boolean }))
 			.addError(HttpApiError.NotFound)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
-			.middleware(SessionSpec),
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden),
 	) {}

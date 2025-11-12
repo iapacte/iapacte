@@ -1,5 +1,6 @@
 import { createClient } from '@libsql/client'
 import { betterAuth } from 'better-auth'
+import { Effect } from 'effect'
 import { LibSQLDialect } from 'kysely-turso/libsql'
 
 // Validate environment variables first
@@ -18,7 +19,8 @@ const betterAuthCookieDomain = process.env.BETTER_AUTH_COOKIE_DOMAIN
 const isProduction = process.env.NODE_ENV === 'production'
 // In local Docker, we serve over HTTP. Secure cookies would be ignored by browsers on HTTP.
 // Allow overriding cookie security explicitly for such environments.
-const insecureCookiesOverride = process.env.BETTER_AUTH_INSECURE_COOKIES === 'true'
+const insecureCookiesOverride =
+	process.env.BETTER_AUTH_INSECURE_COOKIES === 'true'
 // If a base URL is configured, infer security from protocol; otherwise fall back to NODE_ENV.
 const inferredSecure = betterAuthBaseURL
 	? betterAuthBaseURL.startsWith('https://')
@@ -79,10 +81,14 @@ export const auth = betterAuth({
 				}
 			: {}),
 		// Use secure cookies in production (HTTPS only)
-    useSecureCookies: insecureCookiesOverride ? false : inferredSecure,
+		useSecureCookies: insecureCookiesOverride ? false : inferredSecure,
 		ipAddress: {
 			ipAddressHeaders: ['x-client-ip', 'x-forwarded-for', 'cf-connecting-ip'],
 			disableIpTracking: false,
 		},
 	},
 }) as ReturnType<typeof betterAuth>
+
+export class Auth extends Effect.Service<Auth>()('Auth', {
+	effect: Effect.sync(() => ({ instance: auth })),
+}) {}

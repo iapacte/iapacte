@@ -5,10 +5,9 @@ export class GroupBetterAuthSpec extends HttpApiGroup.make('BetterAuth')
   .add(HttpApiEndpoint.post('betterAuthPost', '/auth/*'))
   .add(HttpApiEndpoint.put('betterAuthPut', '/auth/*'))
   .add(HttpApiEndpoint.patch('betterAuthPatch', '/auth/*'))
-  .add(HttpApiEndpoint.delete('betterAuthDelete', '/auth/*'))
+  .add(HttpApiEndpoint.del('betterAuthDelete', '/auth/*'))
   .add(HttpApiEndpoint.options('betterAuthOptions', '/auth/*')) {}
 
 export const BetterAuthApiSpec = HttpApi.make('BetterAuthApi').add(
   GroupBetterAuthSpec,
 )
-

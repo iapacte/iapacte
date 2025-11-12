@@ -1,11 +1,14 @@
 import { HttpApiBuilder, HttpApiError } from '@effect/platform'
 import { Effect } from 'effect'
 
-import type { PermissionAction, ResourceType } from '~services'
+/**
+ * TODO(authz): Restore these types when authorization checks are available.
+ */
+// import type { PermissionAction, ResourceType } from '~services'
 import {
 	AuthenticatedSession,
-	OpenFGAClient,
-	AuthorizationService,
+	// AuthorizationService,
+	// OpenFGAClient,
 	WorkspaceStore,
 } from '~services'
 import { GroupApiSpec } from '../specs/api.js'
@@ -33,106 +36,119 @@ export const GroupOrganizationsLive = HttpApiBuilder.group(
 		handlers
 			.handle('listOrganizations', () =>
 				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
+					const user = yield* AuthenticatedSession
 					const store = yield* WorkspaceStore
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
-
-					const organizations = yield* store.listOrganizationsForUser(userId)
+					const organizations = yield* store.listOrganizationsForUser(
+						user.userId,
+					)
 
 					return organizations.map(mapOrganizationRecord)
 				}),
 			)
-			.handle('createOrganization', ({ body }) =>
+			.handle('createOrganization', ({ payload }) =>
 				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
+					const user = yield* AuthenticatedSession
 					const store = yield* WorkspaceStore
-					const fga = yield* OpenFGAClient
+					// const fga = yield* OpenFGAClient
 
-					const ownerId = session?.user?.id
-					if (!ownerId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
+					const createData: {
+						name: string
+						region?: string
+						metadata?: unknown
+						ownerId: string
+						ownerEmail?: string
+					} = {
+						name: payload.name,
+						ownerId: user.userId,
+					}
+					if (payload.region !== undefined) {
+						createData.region = payload.region
+					}
+					if (payload.metadata !== undefined) {
+						createData.metadata = payload.metadata
+					}
+					if (user.email !== undefined) {
+						createData.ownerEmail = user.email
 					}
 
-					const record = yield* store.createOrganization({
-						name: body.name,
-						region: body.region,
-						metadata: body.metadata,
-						ownerId,
-						ownerEmail: session.user?.email ?? undefined,
-					})
+					const record = yield* store.createOrganization(createData)
 
-					yield* fga.write([
-						{
-							user: `user:${ownerId}`,
-							relation: 'owner',
-							object: `organization:${record.id}`,
-						},
-					])
+					// TODO(authz): Re-enable FGA writes when authz is ready.
+					// yield* fga.write([
+					// 	{
+					// 		user: `user:${user.userId}`,
+					// 		relation: 'owner',
+					// 		object: `organization:${record.id}`,
+					// 	},
+					// ])
 
 					return mapOrganizationRecord(record)
 				}),
 			)
 			.handle('getOrganization', ({ urlParams }) =>
 				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
+					// const user = yield* AuthenticatedSession
+					yield* AuthenticatedSession
 					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
-
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+					// const authz = yield* AuthorizationService
 
 					const org = yield* store.getOrganization(urlParams.orgId)
 					if (!org) {
 						return yield* Effect.fail(new HttpApiError.NotFound())
 					}
 
-					const allowed = yield* authz.check({
-						userId,
-						action: 'read' as PermissionAction,
-						resourceType: 'organization' as ResourceType,
-						resourceId: org.id,
-					})
-
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+					// TODO(authz): Enforce organization permissions when authz is ready.
+					// const allowed = yield* authz.check({
+					// 	userId: user.userId,
+					// 	action: 'read' as PermissionAction,
+					// 	resourceType: 'organization' as ResourceType,
+					// 	resourceId: org.id,
+					// })
+					// if (!allowed) {
+					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+					// }
 
 					return mapOrganizationRecord(org)
 				}),
 			)
-			.handle('updateOrganization', ({ urlParams, body }) =>
+			.handle('updateOrganization', ({ urlParams, payload }) =>
 				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
+					// const user = yield* AuthenticatedSession
+					yield* AuthenticatedSession
 					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+					// const authz = yield* AuthorizationService
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
+					// TODO(authz): Enforce organization permissions when authz is ready.
+					// const allowed = yield* authz.check({
+					// 	userId: user.userId,
+					// 	action: 'write' as PermissionAction,
+					// 	resourceType: 'organization' as ResourceType,
+					// 	resourceId: urlParams.orgId,
+					// })
+					// if (!allowed) {
+					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+					// }
+
+					const updateData: {
+						name?: string
+						region?: string
+						metadata?: unknown
+					} = {}
+					if (payload.name !== undefined) {
+						updateData.name = payload.name
+					}
+					if (payload.region !== undefined) {
+						updateData.region = payload.region
+					}
+					if (payload.metadata !== undefined) {
+						updateData.metadata = payload.metadata
 					}
 
-					const allowed = yield* authz.check({
-						userId,
-						action: 'write' as PermissionAction,
-						resourceType: 'organization' as ResourceType,
-						resourceId: urlParams.orgId,
-					})
-
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
-
-					const updated = yield* store.updateOrganization(urlParams.orgId, {
-						name: body.name,
-						region: body.region,
-						metadata: body.metadata,
-					})
+					const updated = yield* store.updateOrganization(
+						urlParams.orgId,
+						updateData,
+					)
 
 					if (!updated) {
 						return yield* Effect.fail(new HttpApiError.NotFound())
@@ -143,25 +159,21 @@ export const GroupOrganizationsLive = HttpApiBuilder.group(
 			)
 			.handle('deleteOrganization', ({ urlParams }) =>
 				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
+					// const user = yield* AuthenticatedSession
+					yield* AuthenticatedSession
 					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+					// const authz = yield* AuthorizationService
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
-
-					const allowed = yield* authz.check({
-						userId,
-						action: 'delete' as PermissionAction,
-						resourceType: 'organization' as ResourceType,
-						resourceId: urlParams.orgId,
-					})
-
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+					// TODO(authz): Enforce organization permissions when authz is ready.
+					// const allowed = yield* authz.check({
+					// 	userId: user.userId,
+					// 	action: 'delete' as PermissionAction,
+					// 	resourceType: 'organization' as ResourceType,
+					// 	resourceId: urlParams.orgId,
+					// })
+					// if (!allowed) {
+					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+					// }
 
 					const deleted = yield* store.deleteOrganization(urlParams.orgId)
 					if (!deleted) {

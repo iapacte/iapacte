@@ -1,272 +1,278 @@
-import { HttpApiBuilder, HttpApiError } from '@effect/platform'
-import { Effect } from 'effect'
+// import { HttpApiBuilder, HttpApiError } from '@effect/platform'
+// import { Effect } from 'effect'
 
-import type { PermissionAction, ResourceType, Authorization } from '~services'
-import {
-	AuthenticatedSession,
-	AuthorizationService,
-	WorkspaceStore,
-} from '~services'
-import { GroupApiSpec } from '../specs/api.js'
+// /**
+//  * TODO(authz): Re-enable these types when permission enforcement returns.
+//  */
+// // import type { Authorization, PermissionAction, ResourceType } from '~services'
+// import {
+// 	AuthenticatedSession,
+// 	// AuthorizationService,
+// 	WorkspaceStore,
+// } from '~services'
+// import { GroupApiSpec } from '../specs/api.js'
 
-const mapCollaboration = (record: {
-	id: string
-	resourceType: string
-	resourceId: string
-	accessibleBy: { type: 'user' | 'email'; reference: string }
-	role: string
-	createdAt: string
-	createdBy: string
-}) => ({
-	id: record.id,
-	resourceType: record.resourceType,
-	resourceId: record.resourceId,
-	accessibleBy: record.accessibleBy,
-	role: record.role,
-	createdAt: record.createdAt,
-	createdBy: record.createdBy,
-})
+// const mapCollaboration = (record: {
+// 	id: string
+// 	resourceType: string
+// 	resourceId: string
+// 	accessibleBy: { type: 'user' | 'email'; reference: string }
+// 	role: string
+// 	createdAt: string
+// 	createdBy: string
+// }) => ({
+// 	id: record.id,
+// 	resourceType: record.resourceType,
+// 	resourceId: record.resourceId,
+// 	accessibleBy: record.accessibleBy,
+// 	role: record.role,
+// 	createdAt: record.createdAt,
+// 	createdBy: record.createdBy,
+// })
 
-const mapExemption = (record: {
-	id: string
-	subject: string
-	createdAt: string
-	createdBy: string
-	reason?: string
-}) => ({
-	id: record.id,
-	subject: record.subject,
-	createdAt: record.createdAt,
-	createdBy: record.createdBy,
-	reason: record.reason,
-})
+// const mapExemption = (record: {
+// 	id: string
+// 	subject: string
+// 	createdAt: string
+// 	createdBy: string
+// 	reason?: string
+// }) => ({
+// 	id: record.id,
+// 	subject: record.subject,
+// 	createdAt: record.createdAt,
+// 	createdBy: record.createdBy,
+// 	reason: record.reason,
+// })
 
-const ensurePermission = (
-	authz: Authorization,
-	params: {
-		userId: string
-		action: PermissionAction
-		resourceType: ResourceType
-		resourceId: string
-	},
-) =>
-	authz.check({
-		userId: params.userId,
-		action: params.action,
-		resourceType: params.resourceType,
-		resourceId: params.resourceId,
-	})
+// /*
+//  * TODO(authz): Re-enable permission enforcement once AuthorizationService is wired.
+// const ensurePermission = (
+// 	authz: Authorization,
+// 	params: {
+// 		userId: string
+// 		action: PermissionAction
+// 		resourceType: ResourceType
+// 		resourceId: string
+// 	},
+// ) =>
+// 	authz.check({
+// 		userId: params.userId,
+// 		action: params.action,
+// 		resourceType: params.resourceType,
+// 		resourceId: params.resourceId,
+// 	})
+// */
 
-export const GroupPermissionsLive = HttpApiBuilder.group(
-	GroupApiSpec,
-	'Permissions',
-	handlers =>
-		handlers
-			.handle('createCollaboration', ({ urlParams, body }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+// export const GroupPermissionsLive = HttpApiBuilder.group(
+// 	GroupApiSpec,
+// 	'Permissions',
+// 	handlers =>
+// 		handlers
+// 			.handle('createCollaboration', ({ urlParams, body }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'share' as PermissionAction,
-						resourceType: body.resourceType as ResourceType,
-						resourceId: body.resourceId,
-					})
+// 					// TODO(authz): Enforce collaboration permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'share' as PermissionAction,
+// 					// 	resourceType: body.resourceType as ResourceType,
+// 					// 	resourceId: body.resourceId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+// 					const record = yield* store.createCollaboration(urlParams.orgId, {
+// 						resourceType: body.resourceType,
+// 						resourceId: body.resourceId,
+// 						accessibleBy: body.accessibleBy,
+// 						role: body.role,
+// 						createdBy: userId,
+// 					})
 
-					const record = yield* store.createCollaboration(urlParams.orgId, {
-						resourceType: body.resourceType,
-						resourceId: body.resourceId,
-						accessibleBy: body.accessibleBy,
-						role: body.role,
-						createdBy: userId,
-					})
+// 					return mapCollaboration(record)
+// 				}),
+// 			)
+// 			.handle('listResourceCollaborations', ({ urlParams }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					return mapCollaboration(record)
-				}),
-			)
-			.handle('listResourceCollaborations', ({ urlParams }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+// 					// TODO(authz): Enforce collaboration permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'read' as PermissionAction,
+// 					// 	resourceType: urlParams.resourceType as ResourceType,
+// 					// 	resourceId: urlParams.resourceId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'read' as PermissionAction,
-						resourceType: urlParams.resourceType as ResourceType,
-						resourceId: urlParams.resourceId,
-					})
+// 					const items = yield* store.listCollaborations(
+// 						urlParams.orgId,
+// 						urlParams.resourceType,
+// 						urlParams.resourceId,
+// 					)
 
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+// 					return items.map(mapCollaboration)
+// 				}),
+// 			)
+// 			.handle('updateCollaboration', ({ urlParams, body }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					const items = yield* store.listCollaborations(
-						urlParams.orgId,
-						urlParams.resourceType,
-						urlParams.resourceId,
-					)
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					return items.map(mapCollaboration)
-				}),
-			)
-			.handle('updateCollaboration', ({ urlParams, body }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+// 					const existing = yield* store.getCollaboration(
+// 						urlParams.orgId,
+// 						urlParams.collabId,
+// 					)
+// 					if (!existing) {
+// 						return yield* Effect.fail(new HttpApiError.NotFound())
+// 					}
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+// 					// TODO(authz): Enforce collaboration permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'share' as PermissionAction,
+// 					// 	resourceType: existing.resourceType as ResourceType,
+// 					// 	resourceId: existing.resourceId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					const existing = yield* store.getCollaboration(
-						urlParams.orgId,
-						urlParams.collabId,
-					)
-					if (!existing) {
-						return yield* Effect.fail(new HttpApiError.NotFound())
-					}
+// 					const updated = yield* store.updateCollaboration(
+// 						urlParams.orgId,
+// 						urlParams.collabId,
+// 						{
+// 							role: body.role,
+// 						},
+// 					)
 
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'share' as PermissionAction,
-						resourceType: existing.resourceType as ResourceType,
-						resourceId: existing.resourceId,
-					})
+// 					if (!updated) {
+// 						return yield* Effect.fail(new HttpApiError.NotFound())
+// 					}
 
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+// 					return mapCollaboration(updated)
+// 				}),
+// 			)
+// 			.handle('deleteCollaboration', ({ urlParams }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					const updated = yield* store.updateCollaboration(
-						urlParams.orgId,
-						urlParams.collabId,
-						{
-							role: body.role,
-						},
-					)
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					if (!updated) {
-						return yield* Effect.fail(new HttpApiError.NotFound())
-					}
+// 					const existing = yield* store.getCollaboration(
+// 						urlParams.orgId,
+// 						urlParams.collabId,
+// 					)
+// 					if (!existing) {
+// 						return yield* Effect.fail(new HttpApiError.NotFound())
+// 					}
 
-					return mapCollaboration(updated)
-				}),
-			)
-			.handle('deleteCollaboration', ({ urlParams }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+// 					// TODO(authz): Enforce collaboration permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'share' as PermissionAction,
+// 					// 	resourceType: existing.resourceType as ResourceType,
+// 					// 	resourceId: existing.resourceId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+// 					const deleted = yield* store.deleteCollaboration(
+// 						urlParams.orgId,
+// 						urlParams.collabId,
+// 					)
+// 					if (!deleted) {
+// 						return yield* Effect.fail(new HttpApiError.NotFound())
+// 					}
 
-					const existing = yield* store.getCollaboration(
-						urlParams.orgId,
-						urlParams.collabId,
-					)
-					if (!existing) {
-						return yield* Effect.fail(new HttpApiError.NotFound())
-					}
+// 					return { deleted: true }
+// 				}),
+// 			)
+// 			.handle('createExemption', ({ urlParams, body }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'share' as PermissionAction,
-						resourceType: existing.resourceType as ResourceType,
-						resourceId: existing.resourceId,
-					})
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
+// 					// TODO(authz): Enforce exemption permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'share' as PermissionAction,
+// 					// 	resourceType: 'organization' as ResourceType,
+// 					// 	resourceId: urlParams.orgId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					const deleted = yield* store.deleteCollaboration(
-						urlParams.orgId,
-						urlParams.collabId,
-					)
-					if (!deleted) {
-						return yield* Effect.fail(new HttpApiError.NotFound())
-					}
+// 					const record = yield* store.createExemption(urlParams.orgId, {
+// 						subject: body.subject,
+// 						reason: body.reason,
+// 						createdBy: userId,
+// 					})
 
-					return { deleted: true }
-				}),
-			)
-			.handle('createExemption', ({ urlParams, body }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
+// 					return mapExemption(record)
+// 				}),
+// 			)
+// 			.handle('listExemptions', ({ urlParams }) =>
+// 				Effect.gen(function* () {
+// 					const { session } = yield* AuthenticatedSession
+// 					const store = yield* WorkspaceStore
+// 					// const authz = yield* AuthorizationService
 
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
+// 					const userId = session?.user?.id
+// 					if (!userId) {
+// 						return yield* Effect.fail(new HttpApiError.Unauthorized())
+// 					}
 
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'share' as PermissionAction,
-						resourceType: 'organization' as ResourceType,
-						resourceId: urlParams.orgId,
-					})
+// 					// TODO(authz): Enforce exemption permissions when authz is ready.
+// 					// const allowed = yield* ensurePermission(authz, {
+// 					// 	userId,
+// 					// 	action: 'read' as PermissionAction,
+// 					// 	resourceType: 'organization' as ResourceType,
+// 					// 	resourceId: urlParams.orgId,
+// 					// })
+// 					// if (!allowed) {
+// 					// 	return yield* Effect.fail(new HttpApiError.Forbidden())
+// 					// }
 
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
-
-					const record = yield* store.createExemption(urlParams.orgId, {
-						subject: body.subject,
-						reason: body.reason,
-						createdBy: userId,
-					})
-
-					return mapExemption(record)
-				}),
-			)
-			.handle('listExemptions', ({ urlParams }) =>
-				Effect.gen(function* () {
-					const { session } = yield* AuthenticatedSession
-					const store = yield* WorkspaceStore
-					const authz = yield* AuthorizationService
-
-					const userId = session?.user?.id
-					if (!userId) {
-						return yield* Effect.fail(new HttpApiError.Unauthorized())
-					}
-
-					const allowed = yield* ensurePermission(authz, {
-						userId,
-						action: 'read' as PermissionAction,
-						resourceType: 'organization' as ResourceType,
-						resourceId: urlParams.orgId,
-					})
-
-					if (!allowed) {
-						return yield* Effect.fail(new HttpApiError.Forbidden())
-					}
-
-					const items = yield* store.listExemptions(urlParams.orgId)
-					return items.map(mapExemption)
-				}),
-			),
-)
+// 					const items = yield* store.listExemptions(urlParams.orgId)
+// 					return items.map(mapExemption)
+// 				}),
+// 			),
+// )

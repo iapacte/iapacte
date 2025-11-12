@@ -80,6 +80,9 @@ const CreateExemptionBody = Schema.Struct({
 	reason: Schema.optional(Schema.String),
 })
 
+/**
+ * TODO(authz): Permission checks are temporarily disabled; re-enable when ready.
+ */
 export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 	.add(
 		HttpApiEndpoint.post(
@@ -91,7 +94,8 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.addSuccess(Collaboration)
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	)
 	.add(
@@ -102,7 +106,8 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.setUrlParams(ResourceCollaborationsPath)
 			.addSuccess(Schema.Array(Collaboration))
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	)
 	.add(
@@ -116,7 +121,8 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.NotFound)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	)
 	.add(
@@ -128,7 +134,8 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.addSuccess(Schema.Struct({ deleted: Schema.Boolean }))
 			.addError(HttpApiError.NotFound)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	)
 	.add(
@@ -138,7 +145,8 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.addSuccess(Exemption)
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	)
 	.add(
@@ -146,6 +154,7 @@ export class GroupPermissionsSpec extends HttpApiGroup.make('Permissions')
 			.setUrlParams(ExemptionsPath)
 			.addSuccess(Schema.Array(Exemption))
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.middleware(SessionSpec),
 	) {}

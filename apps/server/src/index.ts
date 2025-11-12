@@ -10,7 +10,7 @@ import {
 import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
 import { Effect, Layer } from 'effect'
 
-import { LoggerLive } from '~lib'
+import { Auth, EnvVars, LoggerLive } from '~lib'
 import {
 	AuthorizationService,
 	BetterAuth,
@@ -26,8 +26,22 @@ const middleware = Layer.mergeAll(
 	HttpApiSwagger.layer({ path: '/api/docs' }),
 )
 
+const CorsLive = Layer.unwrapEffect(
+	EnvVars.pipe(
+		Effect.map(env =>
+			HttpApiBuilder.middlewareCors({
+				credentials: true,
+				allowedOrigins: env.ALLOWED_ORIGINS,
+			}),
+		),
+	),
+)
+
 const HttpLive = HttpApiBuilder.serve(HttpMiddleware.logger).pipe(
 	Layer.provide(middleware),
+	Layer.provide(CorsLive),
+	Layer.provide(EnvVars.Default),
+	Layer.provide(Auth.Default),
 	Layer.provide(BetterAuth.Default),
 	Layer.provide(BetterAuthApiLive),
 	Layer.provide(GroupApiLive),

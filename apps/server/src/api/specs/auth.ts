@@ -48,6 +48,9 @@ export class AuthorizeResponse extends Schema.Class<AuthorizeResponse>(
 	authorized: Schema.Boolean,
 }) {}
 
+/**
+ * TODO(authz): Permission checks are temporarily disabled; re-enable when ready.
+ */
 export class GroupAuthSpec extends HttpApiGroup.make('Authorization')
 	.add(
 		HttpApiEndpoint.get('authorize', '/authorize')
@@ -55,7 +58,8 @@ export class GroupAuthSpec extends HttpApiGroup.make('Authorization')
 			.addSuccess(AuthorizeResponse)
 			.addError(HttpApiError.BadRequest)
 			.addError(HttpApiError.Unauthorized)
-			.addError(HttpApiError.Forbidden)
+			// TODO(authz): Re-enable Forbidden once authz returns.
+			// .addError(HttpApiError.Forbidden)
 			.addError(HttpApiError.InternalServerError)
 			.middleware(SessionSpec),
 	)

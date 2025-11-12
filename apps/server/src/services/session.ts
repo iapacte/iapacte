@@ -1,125 +1,89 @@
 import {
-  HttpApiError,
-  HttpApiMiddleware,
-  HttpApiSecurity,
-  HttpServerRequest,
+	HttpApiMiddleware,
+	HttpApiSecurity,
+	HttpServerRequest,
 } from '@effect/platform'
-import { Context, Effect, Layer, Redacted, Schema } from 'effect'
+import { Context, Effect, Layer, type Redacted, Schema } from 'effect'
 
-import type { BetterAuthSession } from './better_auth.js'
-import { BetterAuth } from './better_auth.js'
+import { Auth, InternalServerError, Unauthorized } from '~lib'
 
-export class AuthenticatedSession extends Context.Tag(
-  'AuthenticatedSession',
-)<
-  AuthenticatedSession,
-  {
-    readonly session: BetterAuthSession
-  }
+export const CurrentUserSchema = Schema.Struct({
+	sessionId: Schema.String,
+	userId: Schema.String,
+	email: Schema.String,
+	name: Schema.optional(Schema.String),
+	image: Schema.NullOr(Schema.String),
+	emailVerified: Schema.optional(Schema.Boolean),
+})
+
+export class AuthenticatedSession extends Context.Tag('AuthenticatedSession')<
+	AuthenticatedSession,
+	Schema.Schema.Type<typeof CurrentUserSchema>
 >() {}
 
 export class SessionSpec extends HttpApiMiddleware.Tag<SessionSpec>()(
-  'BetterAuthSession',
-  {
-    provides: AuthenticatedSession,
-    failure: Schema.Union(
-      HttpApiError.BadRequest,
-      HttpApiError.Unauthorized,
-      HttpApiError.InternalServerError,
-    ),
-    security: {
-      bearer: HttpApiSecurity.bearer,
-    },
-  },
+	'BetterAuthSession',
+	{
+		provides: AuthenticatedSession,
+		failure: Schema.Union(Unauthorized, InternalServerError),
+		security: {
+			bearer: HttpApiSecurity.bearer,
+		},
+	},
 ) {}
 
 export const SessionLive = Layer.effect(
-  SessionSpec,
-  Effect.gen(function* () {
-    const betterAuth = yield* BetterAuth
+	SessionSpec,
+	Effect.gen(function* () {
+		const auth = yield* Auth
 
-    return {
-      bearer: (_token: Redacted.Redacted<string>) =>
-        Effect.gen(function* () {
-          const request = yield* HttpServerRequest.HttpServerRequest
+		return {
+			bearer: (_token: Redacted.Redacted<string>) =>
+				Effect.gen(function* () {
+					const request = yield* HttpServerRequest.HttpServerRequest
 
-          const headers = extractHeaders(request)
+					const raw = request.source as Request
+					const headers = new Headers(raw.headers)
 
-          const session = yield* betterAuth
-            .call((client, signal) =>
-              client.api.getSession({
-                headers,
-                signal,
-              }),
-            )
-            .pipe(
-              Effect.catchTag('BetterAuthError', error =>
-                Effect.logError('BetterAuth session failure', error.error).pipe(
-                  Effect.andThen(Effect.fail(new HttpApiError.Unauthorized())),
-                ),
-              ),
-            )
+					const session = yield* Effect.tryPromise({
+						try: () =>
+							auth.instance.api.getSession({
+								headers,
+							}),
+						catch: _error =>
+							new InternalServerError({
+								message: 'Failed to get session from Better Auth',
+							}),
+					}).pipe(
+						Effect.tapError(Effect.logError),
+						Effect.catchTag('InternalServerError', error =>
+							Effect.logError('BetterAuth session failure', error).pipe(
+								Effect.andThen(Effect.fail(error)),
+							),
+						),
+					)
 
-          if (!session) {
-            return yield* Effect.fail(new HttpApiError.Unauthorized())
-          }
+					if (!session || !session.session || !session.user) {
+						return yield* Effect.fail(
+							new Unauthorized({
+								message: 'Session is not valid',
+							}),
+						)
+					}
 
-          return { session }
-        }).pipe(
-          Effect.tap(() =>
-            Effect.logDebug('Session validated via Better Auth middleware'),
-          ),
-          Effect.catchAll(() => Effect.fail(new HttpApiError.Unauthorized())),
-        ),
-    }
-  }),
+					return CurrentUserSchema.make({
+						sessionId: session.session.id,
+						userId: session.user.id,
+						email: session.user.email,
+						name: session.user.name,
+						image: session.user.image ?? null,
+						emailVerified: session.user.emailVerified,
+					})
+				}).pipe(
+					Effect.tap(() =>
+						Effect.logDebug('Session validated via Better Auth middleware'),
+					),
+				),
+		} as const
+	}),
 )
-
-function extractHeaders(request: HttpServerRequest.HttpServerRequest): Headers {
-  const headers = new Headers()
-
-  const copyIntoHeaders = (sourceHeaders: Headers | Iterable<[string, string]>) => {
-    if ('forEach' in sourceHeaders && typeof sourceHeaders.forEach === 'function') {
-      sourceHeaders.forEach((value, key) => {
-        headers.append(key, value)
-      })
-    } else {
-      for (const [key, value] of sourceHeaders as Iterable<[string, string]>) {
-        headers.append(key, value)
-      }
-    }
-  }
-
-  if (request.headers && typeof (request.headers as Headers).forEach === 'function') {
-    copyIntoHeaders(request.headers as Headers)
-    return headers
-  }
-
-  const source = request.source
-
-  if (source instanceof Request) {
-    copyIntoHeaders(source.headers)
-    return headers
-  }
-
-  const possibleHeaders = (source as { headers?: unknown })?.headers
-  if (possibleHeaders) {
-    if (possibleHeaders instanceof Headers) {
-      copyIntoHeaders(possibleHeaders)
-      return headers
-    }
-
-    const recordHeaders = possibleHeaders as Record<string, string | string[]>
-    for (const [key, value] of Object.entries(recordHeaders)) {
-      if (Array.isArray(value)) {
-        value.forEach(v => headers.append(key, v))
-      } else {
-        headers.append(key, value)
-      }
-    }
-    return headers
-  }
-
-  return headers
-}
-

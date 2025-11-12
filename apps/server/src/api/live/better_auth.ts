@@ -1,109 +1,157 @@
-import { Buffer } from 'node:buffer'
 import type { IncomingMessage } from 'node:http'
+import type { Socket } from 'node:net'
+import type { TLSSocket } from 'node:tls'
 import {
 	HttpApiBuilder,
 	HttpServerRequest,
 	HttpServerResponse,
 } from '@effect/platform'
+import * as NodeHttpServerRequest from '@effect/platform-node/NodeHttpServerRequest'
+import { getRequest } from 'better-call/node'
 import { Effect } from 'effect'
 
-import { BetterAuth } from '~services'
+import { Auth } from '~lib'
+import { BetterAuthError, betterAuthStatusFromError } from '~services'
 import { BetterAuthApiSpec } from '../specs/better-auth.js'
 
 const forwardBetterAuth = () =>
 	Effect.gen(function* () {
 		const request = yield* HttpServerRequest.HttpServerRequest
-		const betterAuth = yield* BetterAuth
+		const auth = yield* Auth
 
-		const fetchRequest = yield* Effect.promise(() =>
-			toFetchRequest(request.source),
-		)
-		const response = yield* betterAuth.call(client =>
-			client.handler(fetchRequest),
-		)
-
-		const headers = cloneHeaders(response.headers)
-
-		return yield* HttpServerResponse.raw(response.body ?? null, {
-			status: response.status,
-			statusText: response.statusText,
-			headers,
+		const nodeReq = NodeHttpServerRequest.toIncomingMessage(request)
+		const fetchRequest = getRequest({
+			request: nodeReq,
+			base: resolveBaseUrl(nodeReq),
 		})
-	}).pipe(Effect.orDie)
+
+		const authResponse = yield* Effect.tryPromise({
+			try: () => auth.instance.handler(fetchRequest),
+			catch: error => new BetterAuthError({ error }),
+		})
+
+		const body = yield* Effect.tryPromise({
+			try: () => authResponse.arrayBuffer(),
+			catch: error => new BetterAuthError({ error }),
+		})
+
+		const headers = toHeadersInput(authResponse.headers)
+		const contentType = extractContentType(headers)
+		delete headers['content-length']
+
+		return HttpServerResponse.uint8Array(new Uint8Array(body), {
+			status: authResponse.status,
+			statusText: authResponse.statusText,
+			headers,
+			contentType,
+		})
+	}).pipe(
+		Effect.catchTag('BetterAuthError', (error: BetterAuthError) => {
+			const status = betterAuthStatusFromError(error.error)
+			const body =
+				status >= 500
+					? { error: 'Internal server error' }
+					: { error: 'Request failed' }
+
+			return Effect.logError('BetterAuth proxy failure', error.error).pipe(
+				Effect.andThen(
+					Effect.succeed(
+						HttpServerResponse.unsafeJson(body, {
+							status,
+						}),
+					),
+				),
+			)
+		}),
+		Effect.catchAll(() =>
+			Effect.succeed(
+				HttpServerResponse.unsafeJson(
+					{ error: 'Internal server error' },
+					{ status: 500 },
+				),
+			),
+		),
+	)
 
 export const BetterAuthApiLive = HttpApiBuilder.group(
 	BetterAuthApiSpec,
 	'BetterAuth',
 	handlers =>
 		handlers
-			.handleRaw('betterAuthGet', forwardBetterAuth)
-			.handleRaw('betterAuthPost', forwardBetterAuth)
-			.handleRaw('betterAuthPut', forwardBetterAuth)
-			.handleRaw('betterAuthPatch', forwardBetterAuth)
-			.handleRaw('betterAuthDelete', forwardBetterAuth)
-			.handleRaw('betterAuthOptions', forwardBetterAuth),
+			.handle('betterAuthGet', forwardBetterAuth)
+			.handle('betterAuthPost', forwardBetterAuth)
+			.handle('betterAuthPut', forwardBetterAuth)
+			.handle('betterAuthPatch', forwardBetterAuth)
+			.handle('betterAuthDelete', forwardBetterAuth)
+			.handle('betterAuthOptions', forwardBetterAuth),
 )
 
-async function toFetchRequest(source: unknown): Promise<Request> {
-	if (source instanceof Request) {
-		return source
-	}
+const resolveBaseUrl = (request: IncomingMessage): string => {
+	const forwardedProto = request.headers['x-forwarded-proto']
+	const protocol =
+		typeof forwardedProto === 'string'
+			? (forwardedProto.split(',')[0]?.trim() ?? 'http')
+			: isTlsSocket(request.socket)
+				? 'https'
+				: 'http'
 
-	const incoming = source as IncomingMessage
-	const method = incoming.method ?? 'GET'
-	const protoHeader = incoming.headers['x-forwarded-proto']
-	const protocol = Array.isArray(protoHeader)
-		? protoHeader[0]
-		: typeof protoHeader === 'string'
-			? protoHeader
-			: 'http'
-	const host = incoming.headers.host ?? 'localhost'
-	const url = new URL(incoming.url ?? '/', `${protocol}://${host}`)
+	const host =
+		(typeof request.headers[':authority'] === 'string'
+			? request.headers[':authority']
+			: undefined) ??
+		(typeof request.headers.host === 'string'
+			? request.headers.host
+			: undefined) ??
+		'localhost'
 
-	const headers = new Headers()
-	for (const [key, value] of Object.entries(incoming.headers)) {
-		if (value === undefined) continue
-		if (Array.isArray(value)) {
-			value.forEach(entry => headers.append(key, entry))
-		} else {
-			headers.append(key, value)
-		}
-	}
-
-	let body: BodyInit | undefined
-	if (method !== 'GET' && method !== 'HEAD') {
-		const chunks: Buffer[] = []
-		for await (const chunk of incoming) {
-			chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
-		}
-		if (chunks.length > 0) {
-			body = Buffer.concat(chunks)
-		}
-	}
-
-	return new Request(url, {
-		method,
-		headers,
-		body,
-	})
+	return `${protocol}://${host}`
 }
 
-function cloneHeaders(headers: Headers): HeadersInit {
-	const raw = (
-		headers as unknown as { raw?: () => Record<string, string[]> }
+const toHeadersInput = (
+	headers: globalThis.Headers,
+): Record<string, string | ReadonlyArray<string>> => {
+	const rawHeaders = (
+		headers as unknown as {
+			raw?: () => Record<string, ReadonlyArray<string>>
+		}
 	).raw?.()
 
-	if (raw) {
-		const result: Record<string, string | string[]> = {}
-		for (const [key, values] of Object.entries(raw)) {
-			result[key] = values.length > 1 ? values : values[0]
-		}
-		return result
+	if (rawHeaders) {
+		return Object.entries(rawHeaders).reduce<
+			Record<string, string | ReadonlyArray<string>>
+		>((acc, [key, values]) => {
+			if (values.length === 0) {
+				return acc
+			}
+			const first = values[0]!
+			acc[key] = values.length === 1 ? first : values
+			return acc
+		}, {})
 	}
 
-	const result: Record<string, string> = {}
+	const fallback: Record<string, string | ReadonlyArray<string>> = {}
 	headers.forEach((value, key) => {
-		result[key] = value
+		fallback[key] = value
 	})
-	return result
+	return fallback
 }
+
+const extractContentType = (
+	headers: Record<string, string | ReadonlyArray<string>>,
+): string | undefined => {
+	const contentType = headers['content-type']
+	if (contentType === undefined) {
+		return undefined
+	}
+
+	delete headers['content-type']
+
+	if (typeof contentType === 'string') {
+		return contentType
+	}
+
+	return contentType[0] ?? undefined
+}
+
+const isTlsSocket = (socket: Socket): socket is TLSSocket =>
+	'encrypted' in socket && Boolean((socket as TLSSocket).encrypted)

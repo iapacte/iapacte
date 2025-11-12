@@ -16,6 +16,8 @@ export {
 	BetterAuth,
 	BetterAuthError,
 	type BetterAuthSession,
+	betterAuthStatusFromError,
+	mapBetterAuthError,
 } from './better_auth.js'
 export { Database } from './database.js'
 export * from './files.js'

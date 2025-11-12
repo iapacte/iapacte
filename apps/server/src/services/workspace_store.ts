@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-
 import { Context, Effect, Layer } from 'effect'
 
 import { Database } from './database.js'
@@ -321,7 +320,11 @@ const make = Effect.gen(function* () {
 
 		inviteUser: (
 			orgId: string,
-			params: { readonly email: string; readonly role: string; readonly displayName?: string },
+			params: {
+				readonly email: string
+				readonly role: string
+				readonly displayName?: string
+			},
 		) =>
 			Effect.promise(async () => {
 				const id = randomUUID()
@@ -426,7 +429,10 @@ const make = Effect.gen(function* () {
 			params: {
 				readonly resourceType: string
 				readonly resourceId: string
-				readonly accessibleBy: { readonly type: 'user' | 'email'; readonly reference: string }
+				readonly accessibleBy: {
+					readonly type: 'user' | 'email'
+					readonly reference: string
+				}
 				readonly role: string
 				readonly createdBy: string
 			},
@@ -539,7 +545,11 @@ const make = Effect.gen(function* () {
 
 		createExemption: (
 			orgId: string,
-			params: { readonly subject: string; readonly reason?: string; readonly createdBy: string },
+			params: {
+				readonly subject: string
+				readonly reason?: string
+				readonly createdBy: string
+			},
 		) =>
 			Effect.promise(async () => {
 				const id = randomUUID()
