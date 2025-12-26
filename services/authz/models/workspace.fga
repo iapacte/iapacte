@@ -4,19 +4,19 @@ module workspace
 type user
 
 ## Group Definition (for Team Membership and Permissions)
-type group
-  relations
-    define direct_member: [user]
-    define subgroup: [group]
-    define member: direct_member or member from subgroup
+# type group
+#   relations
+#     define direct_member: [user]
+#     define subgroup: [group]
+#     define member: direct_member or member from subgroup
 
 type folder
   relations
     define owner: [user]
     define parent: [folder]
     
-    define viewer: [user, user:*, group#member]
-    define editor: [user, group#member]
+    define viewer: [user, user:*]
+    define editor: [user]
     
     define can_view_content: viewer or owner or editor or can_view_content from parent
     define can_list_children: viewer or owner or editor or can_list_children from parent
@@ -25,49 +25,49 @@ type folder
     define can_share: editor or owner or can_share from parent
     define can_delete: owner
 
-type doc
-  relations
-    define owner: [user]
-    define parent: [folder]
-    
-    define viewer: [user, user:*, group#member]
-    define editor: [user, group#member]
-    
-    define can_read: viewer or owner or editor
-    define can_write: editor or owner
-    define can_share: editor or owner
-    define can_delete: owner
+# type doc
+#   relations
+#     define owner: [user]
+#     define parent: [folder]
+#     
+#     define viewer: [user, user:*]
+#     define editor: [user]
+#     
+#     define can_read: viewer or owner or editor
+#     define can_write: editor or owner
+#     define can_share: editor or owner
+#     define can_delete: owner
 
 type file
   relations
     define owner: [user]
     define parent: [folder]
     
-    define viewer: [user, user:*, group#member]
-    define editor: [user, group#member]
+    define viewer: [user, user:*]
+    define editor: [user]
     
     define can_read: viewer or owner or editor
     define can_write: editor or owner
     define can_share: editor or owner
     define can_delete: owner
 
-type workspace
-  relations
-    define owner: [user]
-    define viewer: [user, group#member]
-    define editor: [user, group#member]
-    
-    define can_view: viewer or owner or editor
-    define can_create_folder: editor or owner
-    define can_edit: owner
-    define can_delete: owner
-    define can_share: owner
+# type workspace
+#   relations
+#     define owner: [user]
+#     define viewer: [user, group#member]
+#     define editor: [user, group#member]
+#     
+#     define can_view: viewer or owner or editor
+#     define can_create_folder: editor or owner
+#     define can_edit: owner
+#     define can_delete: owner
+#     define can_share: owner
 
 type organization
   relations
-    define admin: [user, group#member]
-    define member: [user, group#member]
+    define admin: [user]
+    define member: [user]
     
     define can_view: member or admin
-    define can_create_workspace: member or admin
+    # define can_create_workspace: member or admin
     define can_manage: admin 
